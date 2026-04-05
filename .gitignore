@@ -1,0 +1,27 @@
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.Python
+*.egg-info/
+.pytest_cache/
+
+# Node
+web/node_modules/
+
+# Env & local data
+.env
+.env.local
+web/.env
+web/data/location_cache.json
+location_cache.json
+
+# Generated map outputs (regenerate locally)
+university_map*.svg
+user_event_map*.svg
+map_output*.svg
+
+# OS / editor
+.DS_Store
+*.swp

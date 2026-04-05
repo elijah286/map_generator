@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Map Generator</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="hero">
+        <h1>Map Generator</h1>
+        <p class="lede">
+          Upload an Excel workbook, choose how locations are read, pick regions, and download SVG maps.
+          Geocoding runs on the server using your host’s OpenAI key — nothing is stored except the shared
+          coordinate cache file.
+        </p>
+      </header>
+
+      <main class="card">
+        <section class="field">
+          <label class="label" for="file">Spreadsheet</label>
+          <div class="row">
+            <input type="file" id="file" accept=".xlsx,.xls" />
+            <span class="hint" id="fileLabel">No file chosen</span>
+          </div>
+        </section>
+
+        <section class="field">
+          <label class="label" for="sheet">Worksheet</label>
+          <select id="sheet" disabled></select>
+          <p class="hint">Choose a file first to load sheet names.</p>
+        </section>
+
+        <section class="field">
+          <span class="label">Data source</span>
+          <label class="radio"
+            ><input type="radio" name="mode" value="user_events" checked /> User events (City / State /
+            Country)</label
+          >
+          <label class="radio"
+            ><input type="radio" name="mode" value="universities" /> Universities (columns 1–2)</label
+          >
+          <label class="check"
+            ><input type="checkbox" id="onlyOnMap" checked /> Only rows where “On Map?” is yes (user events
+            only)</label
+          >
+        </section>
+
+        <section class="field">
+          <span class="label">Maps to generate</span>
+          <div class="grid-checks">
+            <label><input type="checkbox" class="region" value="world" checked /> World</label>
+            <label><input type="checkbox" class="region" value="europe" checked /> Europe</label>
+            <label><input type="checkbox" class="region" value="asia" checked /> Asia</label>
+            <label><input type="checkbox" class="region" value="north_america" checked /> North America</label>
+            <label><input type="checkbox" class="region" value="south_america" checked /> South America</label>
+          </div>
+        </section>
+
+        <section class="field">
+          <label class="label" for="basename">Output file prefix</label>
+          <input type="text" id="basename" value="map" autocomplete="off" />
+          <p class="hint">Creates prefix.svg, prefix_europe.svg, …</p>
+        </section>
+
+        <section class="field">
+          <label class="check"
+            ><input type="checkbox" id="useMemberSize" /> Scale points by Member Count (if present)</label
+          >
+        </section>
+
+        <button type="button" class="primary" id="go" disabled>Generate maps</button>
+        <p class="hint warn" id="keyHint" hidden>
+          Server must have <code>OPENAI_API_KEY</code> set (not in the browser).
+        </p>
+      </main>
+
+      <section class="card log-card" id="logSection" hidden>
+        <h2>Log</h2>
+        <pre id="log"></pre>
+      </section>
+
+      <section class="card" id="dlSection" hidden>
+        <h2>Downloads</h2>
+        <ul id="downloads"></ul>
+      </section>
+
+      <footer class="foot">
+        <p>Internal tool — deploy behind HTTPS and restrict access (VPN, SSO, or IP allowlist) in production.</p>
+      </footer>
+    </div>
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>

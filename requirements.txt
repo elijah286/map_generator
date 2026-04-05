@@ -1,0 +1,10 @@
+# Map generation scripts (cartopy + Excel + OpenAI)
+# GUI (mapgen_app.py) — avoids macOS Tcl/Tk abort with system Python
+PySide6>=6.5
+pandas>=2.0
+openpyxl>=3.1
+openai>=1.0
+matplotlib>=3.8
+cartopy>=0.23
+# Optional: simple Basemap demo (map.py)
+basemap>=2.0

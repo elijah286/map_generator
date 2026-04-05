@@ -1,0 +1,10 @@
+# Used when the Railway service root is the `web/` folder (recommended).
+# Dashboard: Service → Settings → Root Directory → `web`
+
+[build]
+builder = "nixpacks"
+
+[deploy]
+startCommand = "npm start"
+healthcheckPath = "/health"
+healthcheckTimeout = 300
