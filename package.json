@@ -1,0 +1,12 @@
+{
+  "name": "map-generator",
+  "private": true,
+  "description": "Monorepo: Python tools + Node web app in web/. Railway/Railpack uses this to run the web service from the repo root.",
+  "scripts": {
+    "postinstall": "npm ci --prefix web",
+    "start": "npm start --prefix web"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

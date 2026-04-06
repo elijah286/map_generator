@@ -16,16 +16,24 @@ Open http://localhost:3847 (or `PORT` from `.env`).
 
 ## Railway + GitHub
 
-This repo mixes Python (optional) and Node in `web/`. Point Railway at **only the Node app**:
+This repo has **Python files at the root** and the **Node app in `web/`**. Railway’s **Railpack** builder may auto-detect Python and fail unless you do one of the following.
+
+### Option A — Root directory (simplest)
 
 1. **New project** → **Deploy from GitHub** → pick this repo.
-2. **Service → Settings → Root directory:** set to `web` (critical).
-3. **Variables:** add `OPENAI_API_KEY` (your secret key). Railway injects `PORT` automatically — do not set `PORT` unless you know you need to.
-4. Deploy. Nixpacks will run `npm install` / `npm ci` and `npm start` per `package.json` and `railway.toml`.
+2. **Service → Settings → Root directory:** set to **`web`**.
+3. **Variables:** add `OPENAI_API_KEY`. Railway sets `PORT` automatically.
+4. Deploy. Railpack/Nixpacks will use `web/package.json` and `web/railway.toml`.
 
-`railway.toml` in `web/` sets `startCommand`, a **health check** on `GET /health`, and a 300s healthcheck timeout. The server binds to **`0.0.0.0`**, which Railway’s proxy expects.
+### Option B — Build from repo root (default)
 
-After deploy, open the generated **public URL** (HTTPS). Optional: enable Railway **cron** or **volume** later if you need a persistent `data/location_cache.json` across deploys (ephemeral disk resets on redeploy unless you add a volume).
+The repo root includes **`railpack.json`** so Railpack uses **Node 22**, runs **`npm ci --prefix web`**, and starts with **`npm start --prefix web`**. A minimal root **`package.json`** exposes the same `start` script.
+
+You still need **`OPENAI_API_KEY`** in Railway variables.
+
+`web/railway.toml` sets a **health check** on `GET /health`. The server listens on **`0.0.0.0`**.
+
+After deploy, open the service **public URL** (HTTPS). Optional: add a **volume** for persistent `web/data/location_cache.json` across redeploys.
 
 ## Deploy (any host)
 
