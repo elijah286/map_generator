@@ -4,6 +4,9 @@
   "packages": {
     "node": "22"
   },
+  "caches": {
+    "node_modules": "web/node_modules"
+  },
   "steps": {
     "install": {
       "commands": [
