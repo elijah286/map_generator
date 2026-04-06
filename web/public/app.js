@@ -39,11 +39,13 @@ function handleFile(file) {
   currentFile = file;
   dropZone.classList.add("has-file");
   dropText.textContent = file.name;
-  resetFrom("sheets");
+  resetFrom("locations");
   loadSheets();
 }
 
-fileInput.addEventListener("change", () => handleFile(fileInput.files?.[0]));
+fileInput.addEventListener("change", () => {
+  handleFile(fileInput.files?.[0]);
+});
 
 dropZone.addEventListener("dragover", (e) => {
   e.preventDefault();
@@ -56,7 +58,10 @@ dropZone.addEventListener("drop", (e) => {
   const f = e.dataTransfer.files?.[0];
   if (f) handleFile(f);
 });
-dropZone.addEventListener("click", () => fileInput.click());
+dropZone.addEventListener("click", (e) => {
+  if (e.target === fileInput) return;
+  fileInput.click();
+});
 
 // ── Sheets ─────────────────────────────────────────────────
 
@@ -239,14 +244,7 @@ function extractRegionKey(filename) {
 // ── Utilities ──────────────────────────────────────────────
 
 function resetFrom(level) {
-  if (level === "sheets") {
-    sheetRow.hidden = true;
-    onMapRow.hidden = true;
-    previewBtn.hidden = true;
-    sheetSelect.innerHTML = "";
-    sheetSelect.disabled = true;
-  }
-  if (level === "sheets" || level === "locations") {
+  if (level === "locations") {
     panelLocations.hidden = true;
     locBody.innerHTML = "";
     panelGenerate.hidden = true;

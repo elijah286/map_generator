@@ -1,5 +1,5 @@
 /**
- * SVG maps via d3-geo + Natural Earth 110m countries (Plate Carree–style view).
+ * SVG maps via d3-geo + Natural Earth (110m for world, 50m for regions).
  */
 import { readFileSync } from "fs";
 import { fileURLToPath } from "url";
@@ -8,20 +8,21 @@ import * as d3 from "d3-geo";
 import { feature } from "topojson-client";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const TOPO_PATH = join(__dirname, "../node_modules/world-atlas/countries-110m.json");
+const TOPO_110 = join(__dirname, "../node_modules/world-atlas/countries-110m.json");
+const TOPO_50 = join(__dirname, "../node_modules/world-atlas/countries-50m.json");
 
-let _landFc = null;
-function landFeatureCollection() {
-  if (_landFc) return _landFc;
-  const topo = JSON.parse(readFileSync(TOPO_PATH, "utf8"));
-  _landFc = feature(topo, topo.objects.countries);
-  return _landFc;
+const _cache = {};
+function loadFeatures(path) {
+  if (_cache[path]) return _cache[path];
+  const topo = JSON.parse(readFileSync(path, "utf8"));
+  _cache[path] = feature(topo, topo.objects.countries);
+  return _cache[path];
 }
 
 export const REGION_FILTERS = {
   world: () => true,
   europe: (p) =>
-    p.Latitude >= 35 && p.Latitude <= 70 && p.Longitude >= -10 && p.Longitude <= 40,
+    p.Latitude >= 35 && p.Latitude <= 70 && p.Longitude >= -12 && p.Longitude <= 42,
   asia: (p) =>
     p.Latitude >= -10 && p.Latitude <= 55 && p.Longitude >= 60 && p.Longitude <= 150,
   north_america: (p) =>
@@ -30,13 +31,22 @@ export const REGION_FILTERS = {
     p.Latitude >= -60 && p.Latitude <= 15 && p.Longitude >= -85 && p.Longitude <= -30,
 };
 
-/** [lonMin, lonMax, latMin, latMax] — matches cartopy PlateCarree set_extent */
+/** [lonMin, lonMax, latMin, latMax] */
 export const REGION_EXTENTS = {
   world: null,
-  europe: [-10, 40, 35, 70],
-  asia: [60, 150, -10, 55],
-  north_america: [-170, -50, 15, 75],
-  south_america: [-85, -30, -60, 15],
+  europe: [-12, 42, 34, 72],
+  asia: [55, 155, -15, 58],
+  north_america: [-172, -48, 12, 78],
+  south_america: [-88, -28, -62, 18],
+};
+
+/** Per-region SVG canvas size (width x height). Regional maps are larger for print. */
+const REGION_CANVAS = {
+  world: [2400, 1200],
+  europe: [2400, 2000],
+  asia: [2800, 1800],
+  north_america: [2200, 2600],
+  south_america: [2000, 2600],
 };
 
 export const REGION_SUFFIX = {
@@ -66,20 +76,21 @@ function bboxFeature(lonMin, lonMax, latMin, latMax) {
   };
 }
 
-function defaultPointRadius(useSize, memberCount) {
-  if (!useSize || memberCount == null || memberCount === "") return 4;
+function pointRadius(useSize, memberCount, isRegional) {
+  const base = isRegional ? 5.5 : 4;
+  if (!useSize || memberCount == null || memberCount === "") return base;
   const n = Number(memberCount);
-  if (!Number.isFinite(n)) return 4;
-  const r = Math.sqrt(Math.max(0, n) * 2) / 4;
-  return Math.max(2.5, Math.min(18, r));
+  if (!Number.isFinite(n)) return base;
+  const r = Math.sqrt(Math.max(0, n) * 2) / 3;
+  return Math.max(base * 0.6, Math.min(base * 4, r));
 }
 
 export function renderRegionSvg(regionKey, points, opts = {}) {
   const { useMemberSize = false } = opts;
-  const width = 1800;
-  const height = 900;
-  const pad = 24;
-  const landFc = landFeatureCollection();
+  const isRegional = regionKey !== "world";
+  const landFc = loadFeatures(isRegional ? TOPO_50 : TOPO_110);
+  const [width, height] = REGION_CANVAS[regionKey] || [2400, 1200];
+  const pad = isRegional ? 40 : 24;
 
   const extent = REGION_EXTENTS[regionKey];
   const filter = REGION_FILTERS[regionKey];
@@ -101,31 +112,50 @@ export function renderRegionSvg(regionKey, points, opts = {}) {
 
   const path = d3.geoPath(projection);
 
+  const clipId = `clip-${regionKey}`;
+  let clipDef = "";
+  if (extent) {
+    const [lonMin, lonMax, latMin, latMax] = extent;
+    const tl = projection([lonMin, latMax]);
+    const br = projection([lonMax, latMin]);
+    if (tl && br) {
+      const cx = Math.min(tl[0], br[0]) - 2;
+      const cy = Math.min(tl[1], br[1]) - 2;
+      const cw = Math.abs(br[0] - tl[0]) + 4;
+      const ch = Math.abs(br[1] - tl[1]) + 4;
+      clipDef = `<defs><clipPath id="${clipId}"><rect x="${cx}" y="${cy}" width="${cw}" height="${ch}"/></clipPath></defs>`;
+    }
+  }
+
+  const strokeW = isRegional ? 0.5 : 0.35;
   const paths = landFc.features
     .map((f) => {
       const d = path(f);
       if (!d) return "";
-      return `<path d="${d}" fill="#e4e2dc" stroke="#b8b6b0" stroke-width="0.35"/>`;
+      return `<path d="${d}" fill="#e4e2dc" stroke="#b8b6b0" stroke-width="${strokeW}"/>`;
     })
     .join("\n");
 
   const circles = data
     .map((p) => {
-      const lon = p.Longitude;
-      const lat = p.Latitude;
-      const xy = projection([lon, lat]);
+      const xy = projection([p.Longitude, p.Latitude]);
       if (!xy || xy.some((n) => !Number.isFinite(n))) return "";
       const [x, y] = xy;
-      const r = defaultPointRadius(useMemberSize, p.MemberCount);
-      return `<circle cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="${r.toFixed(2)}" fill="#1a7f37" stroke="#0d3d1a" stroke-width="0.5" opacity="0.9"/>`;
+      if (x < -10 || x > width + 10 || y < -10 || y > height + 10) return "";
+      const r = pointRadius(useMemberSize, p.MemberCount, isRegional);
+      const sw = isRegional ? 0.7 : 0.5;
+      return `<circle cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="${r.toFixed(2)}" fill="#1a7f37" stroke="#0d3d1a" stroke-width="${sw}" opacity="0.9"/>`;
     })
     .filter(Boolean)
     .join("\n");
 
+  const clipAttr = clipDef ? ` clip-path="url(#${clipId})"` : "";
+
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+  ${clipDef}
   <rect width="100%" height="100%" fill="#e8eef5"/>
-  <g class="land">${paths}</g>
+  <g class="land"${clipAttr}>${paths}</g>
   <g class="points">${circles}</g>
 </svg>`;
 }
