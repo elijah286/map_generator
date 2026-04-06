@@ -5,7 +5,7 @@ import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import { mkdirSync, existsSync } from "fs";
 
-import { getSheetNames } from "./lib/excel.js";
+import { getSheetNames, loadUserEvents, loadUniversities } from "./lib/excel.js";
 import { runPipeline } from "./lib/pipeline.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -35,6 +35,41 @@ app.post("/api/sheets", upload.single("file"), (req, res) => {
     }
     const sheets = getSheetNames(req.file.buffer);
     res.json({ sheets });
+  } catch (e) {
+    res.status(500).json({ error: String(e.message || e) });
+  }
+});
+
+app.post("/api/preview", upload.single("file"), (req, res) => {
+  try {
+    if (!req.file?.buffer) {
+      return res.status(400).json({ error: "Missing file" });
+    }
+    const sheetName = req.body.sheetName || req.body.sheet;
+    if (!sheetName) {
+      return res.status(400).json({ error: "sheetName is required" });
+    }
+    const mode = req.body.mode === "universities" ? "universities" : "user_events";
+    const onlyOnMap = req.body.onlyOnMap !== "false" && req.body.onlyOnMap !== false;
+
+    let rows;
+    if (mode === "user_events") {
+      rows = loadUserEvents(req.file.buffer, sheetName, onlyOnMap);
+    } else {
+      rows = loadUniversities(req.file.buffer, sheetName);
+    }
+
+    res.json({
+      ok: true,
+      mode,
+      sheetName,
+      totalLocations: rows.length,
+      locations: rows.map((r, i) => ({
+        index: i + 1,
+        location: r.LocationString,
+        memberCount: r.MemberCount ?? null,
+      })),
+    });
   } catch (e) {
     res.status(500).json({ error: String(e.message || e) });
   }

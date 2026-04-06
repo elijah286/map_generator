@@ -7,87 +7,114 @@
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
-    <div class="page">
-      <header class="hero">
-        <h1>Map Generator</h1>
-        <p class="lede">
-          Upload an Excel workbook, choose how locations are read, pick regions, and download SVG maps.
-          Geocoding runs on the server using your host’s OpenAI key — nothing is stored except the shared
-          coordinate cache file.
-        </p>
+    <div class="shell">
+
+      <header class="topbar">
+        <span class="topbar-title">Map Generator</span>
+        <span class="topbar-author">by Elijah Kerry</span>
       </header>
 
-      <main class="card">
-        <section class="field">
-          <label class="label" for="file">Spreadsheet</label>
-          <div class="row">
-            <input type="file" id="file" accept=".xlsx,.xls" />
-            <span class="hint" id="fileLabel">No file chosen</span>
+      <main class="main">
+
+        <!-- STEP 1: Upload & configure -->
+        <section class="panel" id="panelUpload">
+          <h2 class="step-num">1</h2>
+          <h3 class="step-title">Upload spreadsheet</h3>
+
+          <div class="field">
+            <label class="drop-zone" id="dropZone">
+              <input type="file" id="file" accept=".xlsx,.xls" hidden />
+              <span class="drop-icon">&#8593;</span>
+              <span class="drop-text" id="dropText">Click or drag an .xlsx file here</span>
+            </label>
+          </div>
+
+          <div class="row-2col" id="sheetRow" hidden>
+            <div class="field">
+              <label class="field-label">Worksheet</label>
+              <select id="sheet" disabled></select>
+            </div>
+            <div class="field">
+              <label class="field-label">Data source</label>
+              <select id="mode">
+                <option value="user_events">User events (City / State / Country)</option>
+                <option value="universities">Universities (columns 1–2)</option>
+              </select>
+            </div>
+          </div>
+
+          <label class="toggle" id="onMapRow" hidden>
+            <input type="checkbox" id="onlyOnMap" checked />
+            <span>Only rows where "On Map?" is yes</span>
+          </label>
+
+          <button class="btn btn-secondary" id="previewBtn" hidden>Load locations</button>
+        </section>
+
+        <!-- STEP 2: Confirm locations -->
+        <section class="panel" id="panelLocations" hidden>
+          <h2 class="step-num">2</h2>
+          <h3 class="step-title">Confirm locations</h3>
+
+          <p class="meta" id="locMeta"></p>
+
+          <div class="table-wrap">
+            <table id="locTable">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Location</th>
+                  <th>Members</th>
+                </tr>
+              </thead>
+              <tbody id="locBody"></tbody>
+            </table>
           </div>
         </section>
 
-        <section class="field">
-          <label class="label" for="sheet">Worksheet</label>
-          <select id="sheet" disabled></select>
-          <p class="hint">Choose a file first to load sheet names.</p>
-        </section>
+        <!-- STEP 3: Configure & generate -->
+        <section class="panel" id="panelGenerate" hidden>
+          <h2 class="step-num">3</h2>
+          <h3 class="step-title">Generate maps</h3>
 
-        <section class="field">
-          <span class="label">Data source</span>
-          <label class="radio"
-            ><input type="radio" name="mode" value="user_events" checked /> User events (City / State /
-            Country)</label
-          >
-          <label class="radio"
-            ><input type="radio" name="mode" value="universities" /> Universities (columns 1–2)</label
-          >
-          <label class="check"
-            ><input type="checkbox" id="onlyOnMap" checked /> Only rows where “On Map?” is yes (user events
-            only)</label
-          >
-        </section>
-
-        <section class="field">
-          <span class="label">Maps to generate</span>
-          <div class="grid-checks">
-            <label><input type="checkbox" class="region" value="world" checked /> World</label>
-            <label><input type="checkbox" class="region" value="europe" checked /> Europe</label>
-            <label><input type="checkbox" class="region" value="asia" checked /> Asia</label>
-            <label><input type="checkbox" class="region" value="north_america" checked /> North America</label>
-            <label><input type="checkbox" class="region" value="south_america" checked /> South America</label>
+          <div class="field">
+            <label class="field-label">Regions</label>
+            <div class="chip-row">
+              <label class="chip"><input type="checkbox" class="region" value="world" checked /><span>World</span></label>
+              <label class="chip"><input type="checkbox" class="region" value="europe" checked /><span>Europe</span></label>
+              <label class="chip"><input type="checkbox" class="region" value="asia" checked /><span>Asia</span></label>
+              <label class="chip"><input type="checkbox" class="region" value="north_america" checked /><span>N. America</span></label>
+              <label class="chip"><input type="checkbox" class="region" value="south_america" checked /><span>S. America</span></label>
+            </div>
           </div>
+
+          <label class="toggle">
+            <input type="checkbox" id="useMemberSize" />
+            <span>Scale points by member count</span>
+          </label>
+
+          <button class="btn btn-primary" id="goBtn">Generate</button>
+          <p class="hint error" id="errorHint" hidden></p>
         </section>
 
-        <section class="field">
-          <label class="label" for="basename">Output file prefix</label>
-          <input type="text" id="basename" value="map" autocomplete="off" />
-          <p class="hint">Creates prefix.svg, prefix_europe.svg, …</p>
+        <!-- STEP 4: Results -->
+        <section class="panel" id="panelResults" hidden>
+          <h2 class="step-num">4</h2>
+          <h3 class="step-title">Your maps</h3>
+          <p class="meta" id="resultsMeta"></p>
+
+          <div id="mapsContainer"></div>
+
+          <details class="log-details" id="logDetails">
+            <summary>Geocoding log</summary>
+            <pre id="log"></pre>
+          </details>
         </section>
 
-        <section class="field">
-          <label class="check"
-            ><input type="checkbox" id="useMemberSize" /> Scale points by Member Count (if present)</label
-          >
-        </section>
-
-        <button type="button" class="primary" id="go" disabled>Generate maps</button>
-        <p class="hint warn" id="keyHint" hidden>
-          Server must have <code>OPENAI_API_KEY</code> set (not in the browser).
-        </p>
       </main>
 
-      <section class="card log-card" id="logSection" hidden>
-        <h2>Log</h2>
-        <pre id="log"></pre>
-      </section>
-
-      <section class="card" id="dlSection" hidden>
-        <h2>Downloads</h2>
-        <ul id="downloads"></ul>
-      </section>
-
       <footer class="foot">
-        <p>Internal tool — deploy behind HTTPS and restrict access (VPN, SSO, or IP allowlist) in production.</p>
+        Built by <strong>Elijah Kerry</strong> &middot; Internal tool
       </footer>
     </div>
     <script src="/app.js" type="module"></script>
