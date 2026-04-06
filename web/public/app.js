@@ -18,6 +18,8 @@ const goBtn       = $("#goBtn");
 const errorHint   = $("#errorHint");
 const logToggle   = $("#logToggle");
 const logEl       = $("#log");
+const dotColorInput = $("#dotColor");
+const dotColorHex   = $("#dotColorHex");
 
 // Steps
 const step1 = $("#step1");
@@ -253,6 +255,7 @@ async function generate() {
   fd.append("mode", modeSelect.value);
   fd.append("onlyOnMap", String(onlyOnMap.checked));
   fd.append("useMemberSize", String($("#useMemberSize").checked));
+  fd.append("dotColor", dotColorInput.value);
   fd.append("basename", "map");
   fd.append("regions", JSON.stringify(regions));
 
@@ -379,6 +382,11 @@ function esc(s) {
   d.textContent = s;
   return d.innerHTML;
 }
+
+// ── Dot color ───────────────────────────────────────
+dotColorInput.addEventListener("input", () => {
+  dotColorHex.textContent = dotColorInput.value;
+});
 
 // Init
 activateStep(1);

@@ -96,8 +96,17 @@ function pointRadius(useSize, memberCount, isRegional) {
   return Math.max(base * 0.6, Math.min(base * 4, r));
 }
 
+function darkenHex(hex, factor = 0.5) {
+  const r = Math.round(parseInt(hex.slice(1, 3), 16) * factor);
+  const g = Math.round(parseInt(hex.slice(3, 5), 16) * factor);
+  const b = Math.round(parseInt(hex.slice(5, 7), 16) * factor);
+  return `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
+}
+
 export function renderRegionSvg(regionKey, points, opts = {}) {
-  const { useMemberSize = false } = opts;
+  const { useMemberSize = false, dotColor = null } = opts;
+  const fill = dotColor || "#1a7f37";
+  const stroke = dotColor ? darkenHex(dotColor) : "#0d3d1a";
   const isRegional = regionKey !== "world";
   const landFc = loadFeatures(isRegional ? TOPO_50 : TOPO_110);
   const [width, height] = REGION_CANVAS[regionKey] || [2400, 1200];
@@ -153,7 +162,7 @@ export function renderRegionSvg(regionKey, points, opts = {}) {
       if (x < -10 || x > width + 10 || y < -10 || y > height + 10) return "";
       const r = pointRadius(useMemberSize, p.MemberCount, isRegional);
       const sw = isRegional ? 0.7 : 0.5;
-      return `<circle cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="${r.toFixed(2)}" fill="#1a7f37" stroke="#0d3d1a" stroke-width="${sw}" opacity="0.9"/>`;
+      return `<circle cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="${r.toFixed(2)}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" opacity="0.9"/>`;
     })
     .filter(Boolean)
     .join("\n");

@@ -107,6 +107,7 @@ app.post("/api/generate", upload.single("file"), async (req, res) => {
     const onlyOnMap = req.body.onlyOnMap !== "false" && req.body.onlyOnMap !== false;
     const useMemberSize = req.body.useMemberSize === "true" || req.body.useMemberSize === true;
     const basename = (req.body.basename || "map").trim() || "map";
+    const dotColor = /^#[0-9a-fA-F]{6}$/.test(req.body.dotColor) ? req.body.dotColor : null;
 
     let regions;
     try {
@@ -126,6 +127,7 @@ app.post("/api/generate", upload.single("file"), async (req, res) => {
       mode,
       onlyOnMap,
       useMemberSize,
+      dotColor,
       basename,
       regions,
       apiKey,
