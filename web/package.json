@@ -7,7 +7,9 @@
     "node": ">=20"
   },
   "scripts": {
+    "prestart": "lsof -ti :${PORT:-3847} | xargs kill -9 2>/dev/null || true",
     "start": "node server.js",
+    "predev": "lsof -ti :${PORT:-3847} | xargs kill -9 2>/dev/null || true",
     "dev": "node --watch server.js"
   },
   "dependencies": {

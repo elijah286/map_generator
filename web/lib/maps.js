@@ -40,7 +40,6 @@ export const REGION_EXTENTS = {
   south_america: [-88, -28, -62, 18],
 };
 
-/** Per-region SVG canvas size (width x height). Regional maps are larger for print. */
 const REGION_CANVAS = {
   world: [2400, 1200],
   europe: [2400, 2000],
@@ -57,23 +56,35 @@ export const REGION_SUFFIX = {
   south_america: "_south_america",
 };
 
-function bboxFeature(lonMin, lonMax, latMin, latMax) {
-  return {
-    type: "Feature",
-    properties: {},
-    geometry: {
-      type: "Polygon",
-      coordinates: [
-        [
-          [lonMin, latMin],
-          [lonMax, latMin],
-          [lonMax, latMax],
-          [lonMin, latMax],
-          [lonMin, latMin],
-        ],
-      ],
-    },
-  };
+/**
+ * Build a mercator projection manually fitted to a lon/lat extent.
+ * This avoids d3's fitExtent + bboxFeature which fails for regional polygons
+ * due to spherical geometry interpretation.
+ */
+function buildRegionalProjection(lonMin, lonMax, latMin, latMax, width, height, pad) {
+  const centerLon = (lonMin + lonMax) / 2;
+  const centerLat = (latMin + latMax) / 2;
+  const usableW = width - 2 * pad;
+  const usableH = height - 2 * pad;
+
+  const proj = d3.geoMercator()
+    .center([centerLon, centerLat])
+    .translate([width / 2, height / 2])
+    .scale(1);
+
+  const sw = proj([lonMin, latMin]);
+  const ne = proj([lonMax, latMax]);
+  if (!sw || !ne) return proj;
+
+  const projW = Math.abs(ne[0] - sw[0]);
+  const projH = Math.abs(ne[1] - sw[1]);
+
+  const scale = Math.min(usableW / projW, usableH / projH);
+
+  return d3.geoMercator()
+    .center([centerLon, centerLat])
+    .translate([width / 2, height / 2])
+    .scale(scale);
 }
 
 function pointRadius(useSize, memberCount, isRegional) {
@@ -104,10 +115,8 @@ export function renderRegionSvg(regionKey, points, opts = {}) {
     );
   } else {
     const [lonMin, lonMax, latMin, latMax] = extent;
-    projection = d3.geoEquirectangular().fitExtent(
-      [[pad, pad], [width - pad, height - pad]],
-      bboxFeature(lonMin, lonMax, latMin, latMax)
-    );
+    projection = buildRegionalProjection(lonMin, lonMax, latMin, latMax, width, height, pad);
+
   }
 
   const path = d3.geoPath(projection);

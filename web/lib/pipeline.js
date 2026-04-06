@@ -28,7 +28,8 @@ export async function runPipeline(buffer, options, log) {
     return { files: [], plotted: 0 };
   }
 
-  const geocoded = await geocodeAll(rows, cachePath, apiKey, log);
+  const allRows = await geocodeAll(rows, cachePath, apiKey, log);
+  const geocoded = allRows.filter((r) => r._geocoded);
   log?.(`${geocoded.length} locations with coordinates.`);
 
   const base = basename.replace(/[^\w\-]+/g, "_") || "map";
@@ -43,5 +44,12 @@ export async function runPipeline(buffer, options, log) {
     files.push({ filename, svg });
   }
 
-  return { files, plotted: geocoded.length };
+  const details = allRows.map((r) => ({
+    location: r.LocationString,
+    llmLocation: r._geocoded ? `${r.Latitude}, ${r.Longitude}` : null,
+    memberCount: r.MemberCount ?? null,
+    onMap: r._geocoded,
+  }));
+
+  return { files, plotted: geocoded.length, details };
 }

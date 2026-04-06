@@ -1,122 +1,169 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Map Generator</title>
-    <link rel="stylesheet" href="/styles.css" />
-  </head>
-  <body>
-    <div class="shell">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Map Generator</title>
+  <link rel="stylesheet" href="/styles.css?v=2"/>
+</head>
+<body>
+  <div class="app">
 
-      <header class="topbar">
-        <span class="topbar-title">Map Generator</span>
-        <span class="topbar-author">by Elijah Kerry</span>
-      </header>
+    <!-- ─── SIDEBAR ─────────────────────────────────── -->
+    <aside class="sidebar">
+      <div class="sidebar-head">
+        <div class="logo">Map Generator</div>
+        <div class="byline">by Elijah Kerry</div>
+      </div>
 
-      <main class="main">
+      <div class="sidebar-body">
 
-        <!-- STEP 1: Upload & configure -->
-        <section class="panel" id="panelUpload">
-          <h2 class="step-num">1</h2>
-          <h3 class="step-title">Upload spreadsheet</h3>
-
-          <div class="field">
+        <!-- Step 1 -->
+        <section class="step" id="step1">
+          <div class="step-badge">1</div>
+          <h3 class="step-label">Upload</h3>
+          <div class="step-content">
             <div class="drop-zone" id="dropZone">
-              <input type="file" id="file" accept=".xlsx,.xls" hidden />
-              <span class="drop-icon">&#8593;</span>
-              <span class="drop-text" id="dropText">Click or drag an .xlsx file here</span>
+              <input type="file" id="file" accept=".xlsx,.xls" hidden/>
+              <span class="drop-text" id="dropText">Drop .xlsx here or click</span>
             </div>
-          </div>
-
-          <div class="row-2col" id="sheetRow" hidden>
-            <div class="field">
-              <label class="field-label">Worksheet</label>
-              <select id="sheet" disabled></select>
+            <div id="fileConfig" hidden>
+              <div class="mini-field">
+                <label class="mini-label">Sheet</label>
+                <select id="sheet"></select>
+              </div>
+              <div class="mini-field">
+                <label class="mini-label">Mode</label>
+                <select id="mode">
+                  <option value="user_events">User events</option>
+                  <option value="universities">Universities</option>
+                </select>
+              </div>
+              <label class="mini-check" id="onMapRow">
+                <input type="checkbox" id="onlyOnMap" checked/>
+                <span>Only "On Map?" = yes</span>
+              </label>
+              <button class="btn btn-sm" id="loadBtn">Load locations</button>
             </div>
-            <div class="field">
-              <label class="field-label">Data source</label>
-              <select id="mode">
-                <option value="user_events">User events (City / State / Country)</option>
-                <option value="universities">Universities (columns 1–2)</option>
-              </select>
-            </div>
-          </div>
-
-          <label class="toggle" id="onMapRow" hidden>
-            <input type="checkbox" id="onlyOnMap" checked />
-            <span>Only rows where "On Map?" is yes</span>
-          </label>
-
-          <button class="btn btn-secondary" id="previewBtn" hidden>Load locations</button>
-        </section>
-
-        <!-- STEP 2: Confirm locations -->
-        <section class="panel" id="panelLocations" hidden>
-          <h2 class="step-num">2</h2>
-          <h3 class="step-title">Confirm locations</h3>
-
-          <p class="meta" id="locMeta"></p>
-
-          <div class="table-wrap">
-            <table id="locTable">
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Location</th>
-                  <th>Members</th>
-                </tr>
-              </thead>
-              <tbody id="locBody"></tbody>
-            </table>
           </div>
         </section>
 
-        <!-- STEP 3: Configure & generate -->
-        <section class="panel" id="panelGenerate" hidden>
-          <h2 class="step-num">3</h2>
-          <h3 class="step-title">Generate maps</h3>
-
-          <div class="field">
-            <label class="field-label">Regions</label>
-            <div class="chip-row">
-              <label class="chip"><input type="checkbox" class="region" value="world" checked /><span>World</span></label>
-              <label class="chip"><input type="checkbox" class="region" value="europe" checked /><span>Europe</span></label>
-              <label class="chip"><input type="checkbox" class="region" value="asia" checked /><span>Asia</span></label>
-              <label class="chip"><input type="checkbox" class="region" value="north_america" checked /><span>N. America</span></label>
-              <label class="chip"><input type="checkbox" class="region" value="south_america" checked /><span>S. America</span></label>
+        <!-- Step 2 -->
+        <section class="step disabled" id="step2">
+          <div class="step-badge">2</div>
+          <h3 class="step-label">Configure</h3>
+          <div class="step-content">
+            <p class="loc-count" id="locCount">—</p>
+            <button class="btn-link" id="showLocsBtn" hidden>View location list</button>
+            <div class="mini-field">
+              <label class="mini-label">Regions</label>
+              <div class="chip-row">
+                <label class="chip on"><input type="checkbox" class="region" value="world" checked/><span>World</span></label>
+                <label class="chip on"><input type="checkbox" class="region" value="europe" checked/><span>Europe</span></label>
+                <label class="chip on"><input type="checkbox" class="region" value="asia" checked/><span>Asia</span></label>
+                <label class="chip on"><input type="checkbox" class="region" value="north_america" checked/><span>N. America</span></label>
+                <label class="chip on"><input type="checkbox" class="region" value="south_america" checked/><span>S. America</span></label>
+              </div>
             </div>
+            <label class="mini-check">
+              <input type="checkbox" id="useMemberSize"/>
+              <span>Scale by member count</span>
+            </label>
           </div>
-
-          <label class="toggle">
-            <input type="checkbox" id="useMemberSize" />
-            <span>Scale points by member count</span>
-          </label>
-
-          <button class="btn btn-primary" id="goBtn">Generate</button>
-          <p class="hint error" id="errorHint" hidden></p>
         </section>
 
-        <!-- STEP 4: Results -->
-        <section class="panel" id="panelResults" hidden>
-          <h2 class="step-num">4</h2>
-          <h3 class="step-title">Your maps</h3>
-          <p class="meta" id="resultsMeta"></p>
-
-          <div id="mapsContainer"></div>
-
-          <details class="log-details" id="logDetails">
-            <summary>Geocoding log</summary>
-            <pre id="log"></pre>
-          </details>
+        <!-- Step 3 -->
+        <section class="step disabled" id="step3">
+          <div class="step-badge">3</div>
+          <h3 class="step-label">Generate</h3>
+          <div class="step-content">
+            <button class="btn btn-primary" id="goBtn" disabled>Generate maps</button>
+            <p class="hint error" id="errorHint" hidden></p>
+          </div>
         </section>
 
-      </main>
+        <!-- Log toggle -->
+        <details class="log-toggle" id="logToggle" hidden>
+          <summary>Geocoding log</summary>
+          <pre id="log"></pre>
+        </details>
+      </div>
 
-      <footer class="foot">
-        Built by <strong>Elijah Kerry</strong> &middot; Internal tool
+      <footer class="sidebar-foot">
+        Built by <strong>Elijah Kerry</strong>
       </footer>
+    </aside>
+
+    <!-- ─── MAIN ────────────────────────────────────── -->
+    <main class="canvas">
+
+      <!-- Empty state -->
+      <div class="canvas-empty" id="emptyState">
+        <div class="empty-icon">&#9783;</div>
+        <h2>Upload a spreadsheet to get started</h2>
+        <p>Choose an .xlsx file in the sidebar, load locations, then generate maps.</p>
+      </div>
+
+      <!-- Location confirmation -->
+      <div class="canvas-confirm" id="confirmState" hidden>
+        <div class="confirm-card">
+          <h2 id="confirmTitle">Locations loaded</h2>
+          <p id="confirmSub"></p>
+          <p class="confirm-hint">Configure regions in the sidebar, then hit <strong>Generate maps</strong>.</p>
+        </div>
+      </div>
+
+      <!-- Map viewer -->
+      <div class="canvas-maps" id="mapState" hidden>
+        <div class="tab-bar" id="tabBar"></div>
+        <div class="map-viewport" id="mapViewport"></div>
+        <a class="dl-btn" id="dlBtn" hidden>&#8595; Download SVG</a>
+        <button class="tbl-btn" id="viewTableBtn" hidden>&#9776; View Table</button>
+      </div>
+
+    </main>
+
+    <!-- Location list overlay -->
+    <div class="overlay" id="locOverlay" hidden>
+      <div class="overlay-panel">
+        <div class="overlay-head">
+          <h3>Location list</h3>
+          <button class="overlay-close" id="closeOverlay">&times;</button>
+        </div>
+        <div class="overlay-body">
+          <table id="locTable">
+            <thead><tr><th>#</th><th>Location</th><th>Members</th></tr></thead>
+            <tbody id="locBody"></tbody>
+          </table>
+        </div>
+      </div>
     </div>
-    <script src="/app.js" type="module"></script>
-  </body>
+
+    <!-- Results table overlay -->
+    <div class="overlay" id="resultsOverlay" hidden>
+      <div class="overlay-panel overlay-panel-wide">
+        <div class="overlay-head">
+          <h3>Generation Results</h3>
+          <button class="overlay-close" id="closeResults">&times;</button>
+        </div>
+        <div class="overlay-body">
+          <table id="resultsTable">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Imported Location</th>
+                <th>LLM Location</th>
+                <th>Attendee Size</th>
+                <th>On Map?</th>
+              </tr>
+            </thead>
+            <tbody id="resultsBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <script src="/app.js?v=2" type="module"></script>
+</body>
 </html>

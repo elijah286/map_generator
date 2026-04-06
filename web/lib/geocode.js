@@ -94,13 +94,12 @@ export async function geocodeAll(rows, cachePath, apiKey, log) {
   const out = [];
   for (const row of rows) {
     const c = await geocodeLocation(row.LocationString, cache, cachePath, apiKey, log);
-    if (c) {
-      out.push({
-        ...row,
-        Latitude: c.lat,
-        Longitude: c.lon,
-      });
-    }
+    out.push({
+      ...row,
+      Latitude: c?.lat ?? null,
+      Longitude: c?.lon ?? null,
+      _geocoded: !!c,
+    });
   }
   return out;
 }

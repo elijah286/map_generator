@@ -8,6 +8,13 @@ export function getSheetNames(buffer) {
   return wb.SheetNames;
 }
 
+function findMemberCount(row) {
+  const keys = Object.keys(row);
+  const k = keys.find((x) => x.toLowerCase().includes("member count"));
+  if (k !== undefined && row[k] !== undefined && row[k] !== "") return row[k];
+  return undefined;
+}
+
 function findCol(row, ...candidates) {
   const keys = Object.keys(row);
   for (const c of candidates) {
@@ -22,10 +29,8 @@ export function loadUserEvents(buffer, sheetName, onlyOnMap) {
   const sheet = wb.Sheets[sheetName];
   if (!sheet) throw new Error(`Worksheet not found: ${sheetName}`);
   const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
-  const onKey =
-    rows.length > 0
-      ? Object.keys(rows[0]).find((k) => k.trim().toLowerCase() === "on map?")
-      : null;
+  const columns = rows.length > 0 ? Object.keys(rows[0]) : [];
+  const onKey = columns.find((k) => k.trim().toLowerCase() === "on map?") ?? null;
 
   let out = rows.map((row) => {
     const city = findCol(row, "City");
@@ -34,20 +39,34 @@ export function loadUserEvents(buffer, sheetName, onlyOnMap) {
     const parts = [city, state, country].filter(Boolean);
     return {
       LocationString: parts.join(", "),
-      MemberCount: row["Member Count"] ?? row["Member count"] ?? row["member count"],
+      MemberCount: findMemberCount(row),
     };
   });
 
+  const totalBeforeFilter = out.length;
+  const nonEmpty = out.filter((r) => r.LocationString.length > 0);
+  const totalWithLocation = nonEmpty.length;
+
+  let filtered = nonEmpty;
+  let onMapFilterActive = false;
   if (onlyOnMap && onKey) {
-    out = out.filter((_, i) => {
-      const v = String(rows[i][onKey] ?? "")
-        .trim()
-        .toLowerCase();
-      return v === "yes";
+    onMapFilterActive = true;
+    filtered = nonEmpty.filter((_, i) => {
+      const origIdx = out.indexOf(nonEmpty[i]);
+      const v = String(rows[origIdx]?.[onKey] ?? "").trim().toLowerCase();
+      return v === "yes" || v === "y" || v === "true" || v === "1";
     });
   }
 
-  return out.filter((r) => r.LocationString.length > 0);
+  filtered._meta = {
+    columns,
+    totalRows: rows.length,
+    totalBeforeFilter,
+    totalWithLocation,
+    onMapColumn: onKey,
+    onMapFilterActive,
+  };
+  return filtered;
 }
 
 export function loadUniversities(buffer, sheetName) {

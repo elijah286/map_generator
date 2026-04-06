@@ -21,7 +21,13 @@ const upload = multer({
 });
 
 const app = express();
-app.use(express.static(join(ROOT, "public")));
+app.use(express.static(join(ROOT, "public"), {
+  etag: false,
+  lastModified: true,
+  setHeaders(res) {
+    res.set("Cache-Control", "no-cache, must-revalidate");
+  },
+}));
 
 /** Railway / load balancers */
 app.get("/health", (_req, res) => {
@@ -59,11 +65,15 @@ app.post("/api/preview", upload.single("file"), (req, res) => {
       rows = loadUniversities(req.file.buffer, sheetName);
     }
 
+    const meta = rows._meta || {};
+    console.log(`[preview] sheet="${sheetName}" mode=${mode} onlyOnMap=${onlyOnMap} → ${rows.length} locations`);
+
     res.json({
       ok: true,
       mode,
       sheetName,
       totalLocations: rows.length,
+      meta,
       locations: rows.map((r, i) => ({
         index: i + 1,
         location: r.LocationString,
@@ -111,7 +121,7 @@ app.post("/api/generate", upload.single("file"), async (req, res) => {
     const logs = [];
     const log = (msg) => logs.push(`[${new Date().toISOString()}] ${msg}`);
 
-    const { files, plotted } = await runPipeline(req.file.buffer, {
+    const { files, plotted, details } = await runPipeline(req.file.buffer, {
       sheetName,
       mode,
       onlyOnMap,
@@ -126,6 +136,7 @@ app.post("/api/generate", upload.single("file"), async (req, res) => {
       ok: true,
       plotted,
       logs,
+      details,
       files: files.map((f) => ({
         filename: f.filename,
         svg: f.svg,
@@ -139,6 +150,29 @@ app.post("/api/generate", upload.single("file"), async (req, res) => {
 
 const PORT = Number(process.env.PORT) || 3847;
 const HOST = process.env.HOST || "0.0.0.0";
+
+import { execSync } from "child_process";
+
+function killExistingOnPort(port) {
+  try {
+    const pids = execSync(`lsof -ti :${port}`, { encoding: "utf8" })
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean)
+      .map(Number)
+      .filter((p) => p !== process.pid);
+    for (const pid of pids) {
+      try { process.kill(pid, "SIGTERM"); } catch {}
+    }
+    if (pids.length) console.log(`Killed existing process(es) on port ${port}: ${pids.join(", ")}`);
+  } catch {
+    // lsof exits non-zero when nothing found — that's fine
+  }
+}
+
+killExistingOnPort(PORT);
+
 app.listen(PORT, HOST, () => {
-  console.log(`Map Generator web listening on ${HOST}:${PORT}`);
+  const display = HOST === "0.0.0.0" ? "localhost" : HOST;
+  console.log(`Map Generator web → http://${display}:${PORT}`);
 });
