@@ -104,7 +104,7 @@ function darkenHex(hex, factor = 0.5) {
 }
 
 export function renderRegionSvg(regionKey, points, opts = {}) {
-  const { useMemberSize = false, dotColor = null } = opts;
+  const { useMemberSize = false, dotColor = null, removeOcean = false, landOutline = false, landOutlineColor = null } = opts;
   const fill = dotColor || "#1a7f37";
   const stroke = dotColor ? darkenHex(dotColor) : "#0d3d1a";
   const isRegional = regionKey !== "world";
@@ -146,11 +146,15 @@ export function renderRegionSvg(regionKey, points, opts = {}) {
   }
 
   const strokeW = isRegional ? 0.5 : 0.35;
+  const landFill = landOutline ? "none" : "#e4e2dc";
+  const landStroke = landOutline && landOutlineColor ? landOutlineColor : "#b8b6b0";
+  const landStrokeW = landOutline ? (isRegional ? 1 : 0.7) : strokeW;
+
   const paths = landFc.features
     .map((f) => {
       const d = path(f);
       if (!d) return "";
-      return `<path d="${d}" fill="#e4e2dc" stroke="#b8b6b0" stroke-width="${strokeW}"/>`;
+      return `<path d="${d}" fill="${landFill}" stroke="${landStroke}" stroke-width="${landStrokeW}"/>`;
     })
     .join("\n");
 
@@ -169,10 +173,12 @@ export function renderRegionSvg(regionKey, points, opts = {}) {
 
   const clipAttr = clipDef ? ` clip-path="url(#${clipId})"` : "";
 
+  const bgRect = removeOcean ? '' : '<rect width="100%" height="100%" fill="#e8eef5"/>';
+
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
   ${clipDef}
-  <rect width="100%" height="100%" fill="#e8eef5"/>
+  ${bgRect}
   <g class="land"${clipAttr}>${paths}</g>
   <g class="points">${circles}</g>
 </svg>`;

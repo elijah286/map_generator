@@ -20,6 +20,11 @@ const logToggle   = $("#logToggle");
 const logEl       = $("#log");
 const dotColorInput = $("#dotColor");
 const dotColorHex   = $("#dotColorHex");
+const removeOceanCheck     = $("#removeOcean");
+const landOutlineCheck     = $("#landOutline");
+const landOutlineColorField = $("#landOutlineColorField");
+const landOutlineColorInput = $("#landOutlineColor");
+const landOutlineColorHex   = $("#landOutlineColorHex");
 
 // Steps
 const step1 = $("#step1");
@@ -256,6 +261,11 @@ async function generate() {
   fd.append("onlyOnMap", String(onlyOnMap.checked));
   fd.append("useMemberSize", String($("#useMemberSize").checked));
   fd.append("dotColor", dotColorInput.value);
+  fd.append("removeOcean", String(removeOceanCheck.checked));
+  fd.append("landOutline", String(landOutlineCheck.checked));
+  if (landOutlineCheck.checked) {
+    fd.append("landOutlineColor", landOutlineColorInput.value);
+  }
   fd.append("basename", "map");
   fd.append("regions", JSON.stringify(regions));
 
@@ -386,6 +396,14 @@ function esc(s) {
 // ── Dot color ───────────────────────────────────────
 dotColorInput.addEventListener("input", () => {
   dotColorHex.textContent = dotColorInput.value;
+});
+
+// ── Land outline toggle & color ─────────────────────
+landOutlineCheck.addEventListener("change", () => {
+  landOutlineColorField.hidden = !landOutlineCheck.checked;
+});
+landOutlineColorInput.addEventListener("input", () => {
+  landOutlineColorHex.textContent = landOutlineColorInput.value;
 });
 
 // Init
