@@ -111,6 +111,7 @@ app.post("/api/generate", upload.single("file"), async (req, res) => {
     const removeOcean = req.body.removeOcean === "true" || req.body.removeOcean === true;
     const landOutline = req.body.landOutline === "true" || req.body.landOutline === true;
     const landOutlineColor = /^#[0-9a-fA-F]{6}$/.test(req.body.landOutlineColor) ? req.body.landOutlineColor : null;
+    const includeAntarctica = req.body.includeAntarctica === "true" || req.body.includeAntarctica === true;
 
     let regions;
     try {
@@ -134,6 +135,7 @@ app.post("/api/generate", upload.single("file"), async (req, res) => {
       removeOcean,
       landOutline,
       landOutlineColor,
+      includeAntarctica,
       basename,
       regions,
       apiKey,

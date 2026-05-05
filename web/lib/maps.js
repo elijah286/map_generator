@@ -104,7 +104,7 @@ function darkenHex(hex, factor = 0.5) {
 }
 
 export function renderRegionSvg(regionKey, points, opts = {}) {
-  const { useMemberSize = false, dotColor = null, removeOcean = false, landOutline = false, landOutlineColor = null } = opts;
+  const { useMemberSize = false, dotColor = null, removeOcean = false, landOutline = false, landOutlineColor = null, includeAntarctica = false } = opts;
   const fill = dotColor || "#1a7f37";
   const stroke = dotColor ? darkenHex(dotColor) : "#0d3d1a";
   const isRegional = regionKey !== "world";
@@ -151,10 +151,11 @@ export function renderRegionSvg(regionKey, points, opts = {}) {
   const landStrokeW = landOutline ? (isRegional ? 1 : 0.7) : strokeW;
 
   const paths = landFc.features
+    .filter((f) => includeAntarctica || f.id !== "010")
     .map((f) => {
       const d = path(f);
       if (!d) return "";
-      return `<path d="${d}" fill="${landFill}" stroke="${landStroke}" stroke-width="${landStrokeW}"/>`;
+      return `<path d="${d}" fill="${landFill}" stroke="${landStroke}" stroke-width="${landStrokeW}" data-country-id="${f.id}"/>`;
     })
     .join("\n");
 

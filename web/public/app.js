@@ -31,6 +31,7 @@ const outlineWidthSlider = $("#outlineWidth");
 const outlineWidthVal    = $("#outlineWidthVal");
 const bgColorInput  = $("#bgColor");
 const bgColorHex    = $("#bgColorHex");
+const includeAntarcticaCheck = $("#includeAntarctica");
 
 // Steps
 const step1 = $("#step1");
@@ -272,6 +273,7 @@ async function generate() {
   if (landOutlineCheck.checked) {
     fd.append("landOutlineColor", landOutlineColorInput.value);
   }
+  fd.append("includeAntarctica", String(includeAntarcticaCheck.checked));
   fd.append("basename", "map");
   fd.append("regions", JSON.stringify(regions));
 
@@ -353,6 +355,7 @@ function selectTab(regionKey) {
     p.dataset.baseSw = p.getAttribute("stroke-width");
     p.dataset.baseFill = p.getAttribute("fill");
     p.dataset.baseStroke = p.getAttribute("stroke");
+    if (p.dataset.countryId === "010") p.dataset.isAntarctica = "1";
   });
 
   mapViewport.innerHTML = "";
@@ -471,6 +474,10 @@ function applyLiveSettings() {
     p.setAttribute("stroke-width", (baseSw * outMul).toFixed(2));
     p.setAttribute("fill", outline ? "none" : p.dataset.baseFill);
     p.setAttribute("stroke", outline ? outlineColor : p.dataset.baseStroke);
+    // Antarctica toggle
+    if (p.dataset.isAntarctica === "1") {
+      p.setAttribute("display", includeAntarcticaCheck.checked ? "inline" : "none");
+    }
   });
 
   // Viewport background
@@ -488,6 +495,7 @@ const _visualControls = [
   [landOutlineCheck, "change", () => { landOutlineColorField.hidden = !landOutlineCheck.checked; }],
   [landOutlineColorInput, "input", () => { landOutlineColorHex.textContent = landOutlineColorInput.value; }],
   [bgColorInput, "input", () => { bgColorHex.textContent = bgColorInput.value; }],
+  [includeAntarcticaCheck, "change", null],
 ];
 _visualControls.forEach(([el, evt, extra]) => {
   el.addEventListener(evt, () => {
