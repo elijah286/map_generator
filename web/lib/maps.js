@@ -14,13 +14,13 @@ const TOPO_110 = join(__dirname, "../node_modules/world-atlas/countries-110m.jso
 const TOPO_50 = join(__dirname, "../node_modules/world-atlas/countries-50m.json");
 
 // Detail levels: quantile values for simplification (0 = max simplify, 1 = full detail)
-// These are the quantile thresholds: lower = more simplified
+// Conservative thresholds so shapes stay recognizable at all levels
 const DETAIL_LEVELS = [0, 25, 50, 75];  // 100 is full detail (original)
 const DETAIL_QUANTILES = {
-  0:  0.01,   // very simplified — continental outlines
-  25: 0.05,   // simplified — major country shapes
-  50: 0.15,   // moderate — clear country borders
-  75: 0.40,   // mostly detailed
+  0:  0.15,   // simplified — still recognizable shapes
+  25: 0.25,   // moderate simplification
+  50: 0.40,   // light simplification
+  75: 0.60,   // mostly detailed
 };
 
 const _topoCache = {};
