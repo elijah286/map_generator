@@ -103,6 +103,26 @@ function darkenHex(hex, factor = 0.5) {
   return `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
 }
 
+/**
+ * Split a GeoJSON feature into individual polygon features,
+ * each with its own computed spherical area. MultiPolygon → many Polygon features.
+ */
+function explodeFeature(f) {
+  const geom = f.geometry;
+  if (!geom) return [];
+  if (geom.type === "Polygon") {
+    return [{ ...f, _area: d3.geoArea(f) }];
+  }
+  if (geom.type === "MultiPolygon") {
+    return geom.coordinates.map((coords) => {
+      const sub = { type: "Feature", id: f.id, properties: f.properties, geometry: { type: "Polygon", coordinates: coords } };
+      sub._area = d3.geoArea(sub);
+      return sub;
+    });
+  }
+  return [{ ...f, _area: d3.geoArea(f) }];
+}
+
 export function renderRegionSvg(regionKey, points, opts = {}) {
   const { useMemberSize = false, dotColor = null, removeOcean = false, landOutline = false, landOutlineColor = null, includeAntarctica = false } = opts;
   const fill = dotColor || "#1a7f37";
@@ -152,10 +172,11 @@ export function renderRegionSvg(regionKey, points, opts = {}) {
 
   const paths = landFc.features
     .filter((f) => includeAntarctica || f.id !== "010")
+    .flatMap((f) => explodeFeature(f))
     .map((f) => {
       const d = path(f);
       if (!d) return "";
-      return `<path d="${d}" fill="${landFill}" stroke="${landStroke}" stroke-width="${landStrokeW}" data-country-id="${f.id}"/>`;
+      return `<path d="${d}" fill="${landFill}" stroke="${landStroke}" stroke-width="${landStrokeW}" data-country-id="${f.id}" data-area="${f._area.toExponential(3)}"/>`;
     })
     .join("\n");
 

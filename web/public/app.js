@@ -32,6 +32,8 @@ const outlineWidthVal    = $("#outlineWidthVal");
 const bgColorInput  = $("#bgColor");
 const bgColorHex    = $("#bgColorHex");
 const includeAntarcticaCheck = $("#includeAntarctica");
+const detailSlider  = $("#mapDetail");
+const detailVal     = $("#detailVal");
 
 // Steps
 const step1 = $("#step1");
@@ -469,15 +471,27 @@ function applyLiveSettings() {
   });
 
   // Land paths
+  const detailPct = parseFloat(detailSlider.value);
+  // Map 0-100% to an area threshold.
+  // At 100% show everything, at 0% show only the ~15 largest features.
+  // Use exponential scale: threshold = 10^(lerp(-7, -0.5, 1 - pct/100))
+  const minExp = -7;   // ~1e-7 → show almost everything
+  const maxExp = -0.5; // ~0.3  → only the biggest continents
+  const areaThreshold = detailPct >= 100 ? 0 : Math.pow(10, minExp + (maxExp - minExp) * (1 - detailPct / 100));
+
   svg.querySelectorAll("g.land path").forEach((p) => {
     const baseSw = parseFloat(p.dataset.baseSw) || 0.35;
+    const area = parseFloat(p.dataset.area) || 0;
     p.setAttribute("stroke-width", (baseSw * outMul).toFixed(2));
     p.setAttribute("fill", outline ? "none" : p.dataset.baseFill);
     p.setAttribute("stroke", outline ? outlineColor : p.dataset.baseStroke);
     // Antarctica toggle
     if (p.dataset.isAntarctica === "1") {
       p.setAttribute("display", includeAntarcticaCheck.checked ? "inline" : "none");
+      return;
     }
+    // Detail filtering
+    p.setAttribute("display", area >= areaThreshold ? "inline" : "none");
   });
 
   // Viewport background
@@ -496,6 +510,7 @@ const _visualControls = [
   [landOutlineColorInput, "input", () => { landOutlineColorHex.textContent = landOutlineColorInput.value; }],
   [bgColorInput, "input", () => { bgColorHex.textContent = bgColorInput.value; }],
   [includeAntarcticaCheck, "change", null],
+  [detailSlider, "input", () => { detailVal.textContent = `${detailSlider.value}%`; }],
 ];
 _visualControls.forEach(([el, evt, extra]) => {
   el.addEventListener(evt, () => {
