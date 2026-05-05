@@ -357,6 +357,7 @@ function selectTab(regionKey) {
     p.dataset.baseSw = p.getAttribute("stroke-width");
     p.dataset.baseFill = p.getAttribute("fill");
     p.dataset.baseStroke = p.getAttribute("stroke");
+    p.dataset.baseD = p.getAttribute("d");
     if (p.dataset.countryId === "010") p.dataset.isAntarctica = "1";
   });
 
@@ -444,6 +445,8 @@ function darkenHex(hex, factor = 0.5) {
 }
 
 // ── Apply live settings to inline SVG ───────────────
+const DETAIL_LEVELS = [0, 25, 50, 75]; // must match server DETAIL_LEVELS
+
 function applyLiveSettings() {
   const svg = mapViewport.querySelector("svg");
   if (!svg) return;
@@ -470,28 +473,50 @@ function applyLiveSettings() {
     c.setAttribute("stroke", stroke);
   });
 
-  // Land paths
+  // Detail level: pick the right simplified `d` attribute
   const detailPct = parseFloat(detailSlider.value);
-  // Map 0-100% to an area threshold.
-  // At 100% show everything, at 0% show only the ~15 largest features.
-  // Use exponential scale: threshold = 10^(lerp(-7, -0.5, 1 - pct/100))
-  const minExp = -7;   // ~1e-7 → show almost everything
-  const maxExp = -0.5; // ~0.3  → only the biggest continents
-  const areaThreshold = detailPct >= 100 ? 0 : Math.pow(10, minExp + (maxExp - minExp) * (1 - detailPct / 100));
+  // Find the appropriate detail level
+  let detailAttr = null; // null = use original d (100%)
+  if (detailPct < 100) {
+    // Find the closest level at or below the slider value
+    let best = DETAIL_LEVELS[0];
+    for (const lvl of DETAIL_LEVELS) {
+      if (lvl <= detailPct) best = lvl;
+    }
+    detailAttr = `d-${best}`;
+  }
 
+  // Land paths
   svg.querySelectorAll("g.land path").forEach((p) => {
     const baseSw = parseFloat(p.dataset.baseSw) || 0.35;
-    const area = parseFloat(p.dataset.area) || 0;
     p.setAttribute("stroke-width", (baseSw * outMul).toFixed(2));
     p.setAttribute("fill", outline ? "none" : p.dataset.baseFill);
     p.setAttribute("stroke", outline ? outlineColor : p.dataset.baseStroke);
+
     // Antarctica toggle
     if (p.dataset.isAntarctica === "1") {
       p.setAttribute("display", includeAntarcticaCheck.checked ? "inline" : "none");
       return;
     }
-    // Detail filtering
-    p.setAttribute("display", area >= areaThreshold ? "inline" : "none");
+
+    // Detail: swap the path's `d` attribute with the simplified version
+    if (detailAttr) {
+      const simplified = p.dataset[detailAttr.replace("-", "")]; // data-d-0 → dataset.d0, etc.
+      // dataset keys: data-d-0 → d0, data-d-25 → d25, etc.
+      const key = `d${detailAttr.split("-")[1]}`;
+      const simplifiedD = p.dataset[key];
+      if (simplifiedD != null) {
+        p.setAttribute("d", simplifiedD || "");
+        // Hide paths that simplified away completely
+        p.setAttribute("display", simplifiedD ? "inline" : "none");
+      }
+    } else {
+      // Restore full detail from stored base
+      if (p.dataset.baseD) {
+        p.setAttribute("d", p.dataset.baseD);
+      }
+      p.setAttribute("display", "inline");
+    }
   });
 
   // Viewport background

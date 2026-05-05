@@ -1,22 +1,56 @@
 /**
  * SVG maps via d3-geo + Natural Earth (110m for world, 50m for regions).
+ * Supports multiple detail levels via topojson-simplify.
  */
 import { readFileSync } from "fs";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import * as d3 from "d3-geo";
 import { feature } from "topojson-client";
+import { presimplify, simplify, quantile } from "topojson-simplify";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TOPO_110 = join(__dirname, "../node_modules/world-atlas/countries-110m.json");
 const TOPO_50 = join(__dirname, "../node_modules/world-atlas/countries-50m.json");
 
-const _cache = {};
-function loadFeatures(path) {
-  if (_cache[path]) return _cache[path];
-  const topo = JSON.parse(readFileSync(path, "utf8"));
-  _cache[path] = feature(topo, topo.objects.countries);
-  return _cache[path];
+// Detail levels: quantile values for simplification (0 = max simplify, 1 = full detail)
+// These are the quantile thresholds: lower = more simplified
+const DETAIL_LEVELS = [0, 25, 50, 75];  // 100 is full detail (original)
+const DETAIL_QUANTILES = {
+  0:  0.01,   // very simplified — continental outlines
+  25: 0.05,   // simplified — major country shapes
+  50: 0.15,   // moderate — clear country borders
+  75: 0.40,   // mostly detailed
+};
+
+const _topoCache = {};
+function loadTopo(path) {
+  if (_topoCache[path]) return _topoCache[path];
+  _topoCache[path] = JSON.parse(readFileSync(path, "utf8"));
+  return _topoCache[path];
+}
+
+const _simplifiedCache = {};
+function getSimplifiedFeatures(topoPath, level) {
+  const cacheKey = `${topoPath}:${level}`;
+  if (_simplifiedCache[cacheKey]) return _simplifiedCache[cacheKey];
+
+  const topo = loadTopo(topoPath);
+  const pre = presimplify({ ...topo, objects: { ...topo.objects } });
+  const q = quantile(pre, DETAIL_QUANTILES[level]);
+  const simplified = simplify(pre, q);
+  const fc = feature(simplified, simplified.objects.countries);
+  _simplifiedCache[cacheKey] = fc;
+  return fc;
+}
+
+function loadFeatures(topoPath) {
+  const cacheKey = `${topoPath}:full`;
+  if (_simplifiedCache[cacheKey]) return _simplifiedCache[cacheKey];
+  const topo = loadTopo(topoPath);
+  const fc = feature(topo, topo.objects.countries);
+  _simplifiedCache[cacheKey] = fc;
+  return fc;
 }
 
 export const REGION_FILTERS = {
@@ -104,23 +138,33 @@ function darkenHex(hex, factor = 0.5) {
 }
 
 /**
- * Split a GeoJSON feature into individual polygon features,
- * each with its own computed spherical area. MultiPolygon → many Polygon features.
+ * Build projection for a region.
  */
-function explodeFeature(f) {
-  const geom = f.geometry;
-  if (!geom) return [];
-  if (geom.type === "Polygon") {
-    return [{ ...f, _area: d3.geoArea(f) }];
+function buildProjection(regionKey, landFc, width, height, pad, extent) {
+  if (!extent) {
+    return d3.geoEquirectangular().fitExtent(
+      [[pad, pad], [width - pad, height - pad]],
+      landFc
+    );
   }
-  if (geom.type === "MultiPolygon") {
-    return geom.coordinates.map((coords) => {
-      const sub = { type: "Feature", id: f.id, properties: f.properties, geometry: { type: "Polygon", coordinates: coords } };
-      sub._area = d3.geoArea(sub);
-      return sub;
-    });
-  }
-  return [{ ...f, _area: d3.geoArea(f) }];
+  const [lonMin, lonMax, latMin, latMax] = extent;
+  return buildRegionalProjection(lonMin, lonMax, latMin, latMax, width, height, pad);
+}
+
+/**
+ * Build clip def for a region.
+ */
+function buildClipDef(regionKey, projection, extent) {
+  if (!extent) return "";
+  const [lonMin, lonMax, latMin, latMax] = extent;
+  const tl = projection([lonMin, latMax]);
+  const br = projection([lonMax, latMin]);
+  if (!tl || !br) return "";
+  const cx = Math.min(tl[0], br[0]) - 2;
+  const cy = Math.min(tl[1], br[1]) - 2;
+  const cw = Math.abs(br[0] - tl[0]) + 4;
+  const ch = Math.abs(br[1] - tl[1]) + 4;
+  return `<defs><clipPath id="clip-${regionKey}"><rect x="${cx}" y="${cy}" width="${cw}" height="${ch}"/></clipPath></defs>`;
 }
 
 export function renderRegionSvg(regionKey, points, opts = {}) {
@@ -128,7 +172,8 @@ export function renderRegionSvg(regionKey, points, opts = {}) {
   const fill = dotColor || "#1a7f37";
   const stroke = dotColor ? darkenHex(dotColor) : "#0d3d1a";
   const isRegional = regionKey !== "world";
-  const landFc = loadFeatures(isRegional ? TOPO_50 : TOPO_110);
+  const topoPath = isRegional ? TOPO_50 : TOPO_110;
+  const landFc = loadFeatures(topoPath);
   const [width, height] = REGION_CANVAS[regionKey] || [2400, 1200];
   const pad = isRegional ? 40 : 24;
 
@@ -136,33 +181,16 @@ export function renderRegionSvg(regionKey, points, opts = {}) {
   const filter = REGION_FILTERS[regionKey];
   const data = points.filter((p) => filter(p));
 
-  let projection;
-  if (!extent) {
-    projection = d3.geoEquirectangular().fitExtent(
-      [[pad, pad], [width - pad, height - pad]],
-      landFc
-    );
-  } else {
-    const [lonMin, lonMax, latMin, latMax] = extent;
-    projection = buildRegionalProjection(lonMin, lonMax, latMin, latMax, width, height, pad);
-
-  }
-
+  const projection = buildProjection(regionKey, landFc, width, height, pad, extent);
   const path = d3.geoPath(projection);
+  const clipDef = buildClipDef(regionKey, projection, extent);
 
-  const clipId = `clip-${regionKey}`;
-  let clipDef = "";
-  if (extent) {
-    const [lonMin, lonMax, latMin, latMax] = extent;
-    const tl = projection([lonMin, latMax]);
-    const br = projection([lonMax, latMin]);
-    if (tl && br) {
-      const cx = Math.min(tl[0], br[0]) - 2;
-      const cy = Math.min(tl[1], br[1]) - 2;
-      const cw = Math.abs(br[0] - tl[0]) + 4;
-      const ch = Math.abs(br[1] - tl[1]) + 4;
-      clipDef = `<defs><clipPath id="${clipId}"><rect x="${cx}" y="${cy}" width="${cw}" height="${ch}"/></clipPath></defs>`;
-    }
+  // Pre-compute simplified paths for each detail level
+  const simplifiedFcs = {};
+  const simplifiedPaths = {};
+  for (const level of DETAIL_LEVELS) {
+    simplifiedFcs[level] = getSimplifiedFeatures(topoPath, level);
+    simplifiedPaths[level] = d3.geoPath(projection);
   }
 
   const strokeW = isRegional ? 0.5 : 0.35;
@@ -170,13 +198,26 @@ export function renderRegionSvg(regionKey, points, opts = {}) {
   const landStroke = landOutline && landOutlineColor ? landOutlineColor : "#b8b6b0";
   const landStrokeW = landOutline ? (isRegional ? 1 : 0.7) : strokeW;
 
-  const paths = landFc.features
-    .filter((f) => includeAntarctica || f.id !== "010")
-    .flatMap((f) => explodeFeature(f))
-    .map((f) => {
+  // Build paths: each feature gets its full-detail `d` plus simplified `data-d-*` attributes
+  const featureFilter = (f) => includeAntarctica || f.id !== "010";
+  const pathElements = landFc.features
+    .filter(featureFilter)
+    .map((f, idx) => {
       const d = path(f);
       if (!d) return "";
-      return `<path d="${d}" fill="${landFill}" stroke="${landStroke}" stroke-width="${landStrokeW}" data-country-id="${f.id}" data-area="${f._area.toExponential(3)}"/>`;
+
+      // Build simplified d attributes
+      const simplifiedAttrs = DETAIL_LEVELS.map((level) => {
+        const simpleFc = simplifiedFcs[level];
+        // Match by index — features are in the same order
+        const simpleF = simpleFc.features.find(sf => sf.id === f.id);
+        if (!simpleF) return `data-d-${level}=""`;
+        const sd = simplifiedPaths[level](simpleF);
+        return `data-d-${level}="${sd || ""}"`;
+      }).join(" ");
+
+      const area = d3.geoArea(f);
+      return `<path d="${d}" ${simplifiedAttrs} fill="${landFill}" stroke="${landStroke}" stroke-width="${landStrokeW}" data-country-id="${f.id}" data-area="${area.toExponential(3)}"/>`;
     })
     .join("\n");
 
@@ -193,15 +234,14 @@ export function renderRegionSvg(regionKey, points, opts = {}) {
     .filter(Boolean)
     .join("\n");
 
-  const clipAttr = clipDef ? ` clip-path="url(#${clipId})"` : "";
-
+  const clipAttr = clipDef ? ` clip-path="url(#clip-${regionKey})"` : "";
   const bgRect = removeOcean ? '' : '<rect width="100%" height="100%" fill="#e8eef5"/>';
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
   ${clipDef}
   ${bgRect}
-  <g class="land"${clipAttr}>${paths}</g>
+  <g class="land"${clipAttr}>${pathElements}</g>
   <g class="points">${circles}</g>
 </svg>`;
 }
