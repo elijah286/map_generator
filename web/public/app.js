@@ -580,9 +580,19 @@ function applyLiveSettings() {
       return;
     }
 
-    // Merged landmass path: visible when country borders are hidden
+    // Merged landmass paths
     if (p.dataset.mergedLand === "1") {
-      p.setAttribute("display", showCountries ? "none" : "inline");
+      const mode = p.dataset.mergedMode; // "full" or "major"
+      if (showCountries) {
+        // When showing country borders, merged paths are hidden
+        p.setAttribute("display", "none");
+      } else if (showSmallLand) {
+        // No country borders, show all land → use full merged path
+        p.setAttribute("display", mode === "full" ? "inline" : "none");
+      } else {
+        // No country borders, no small land → use major-only merged path
+        p.setAttribute("display", mode === "major" ? "inline" : "none");
+      }
       return;
     }
 
@@ -592,13 +602,10 @@ function applyLiveSettings() {
       return;
     }
 
-    // Small land masses filter
-    if (!showSmallLand) {
-      const area = parseFloat(p.dataset.area) || 0;
-      if (area < 0.002) {
-        p.setAttribute("display", "none");
-        return;
-      }
+    // Filter non-major landmasses when "show small land masses" is unchecked
+    if (!showSmallLand && p.dataset.major === "0") {
+      p.setAttribute("display", "none");
+      return;
     }
 
     p.setAttribute("display", "inline");

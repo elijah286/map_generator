@@ -27,6 +27,44 @@ function loadFeatures(topoPath) {
   return fc;
 }
 
+// Minimum continent area (steradians) to count as a "major landmass"
+// ~0.01 sr ≈ ~510,000 km² — keeps Australia, removes Greenland (~0.004)
+const MAJOR_LANDMASS_THRESHOLD = 0.008;
+
+const _continentCache = {};
+/**
+ * For each country, compute whether it sits on a major continental landmass.
+ * Uses topojson.merge to find connected landmasses, computes each polygon's
+ * area, then checks each country's centroid against major polygons.
+ */
+function getContinentTags(topoPath) {
+  if (_continentCache[topoPath]) return _continentCache[topoPath];
+
+  const topo = loadTopo(topoPath);
+  const allGeoms = topo.objects.countries.geometries.filter(g => g.id !== "010");
+  const mergedGeo = merge(topo, allGeoms); // MultiPolygon
+
+  // Split into individual continent polygons
+  const continents = mergedGeo.coordinates.map(coords => {
+    const poly = { type: "Polygon", coordinates: coords };
+    return { polygon: poly, area: d3.geoArea(poly) };
+  });
+
+  const majorContinents = continents.filter(c => c.area >= MAJOR_LANDMASS_THRESHOLD);
+
+  // For each country, check if its centroid falls inside a major continent
+  const fc = loadFeatures(topoPath);
+  const tags = {};
+  for (const f of fc.features) {
+    const centroid = d3.geoCentroid(f);
+    const onMajor = majorContinents.some(c => d3.geoContains(c.polygon, centroid));
+    tags[f.id] = onMajor;
+  }
+
+  _continentCache[topoPath] = { tags, majorContinents };
+  return _continentCache[topoPath];
+}
+
 export const REGION_FILTERS = {
   world: () => true,
   europe: (p) =>
@@ -159,12 +197,22 @@ export function renderRegionSvg(regionKey, points, opts = {}) {
   const path = d3.geoPath(projection);
   const clipDef = buildClipDef(regionKey, projection, extent);
 
+  // Continent membership for each country
+  const { tags: continentTags, majorContinents } = getContinentTags(topoPath);
+
   // Merged landmass path (no internal country borders)
   const topo = loadTopo(topoPath);
   const mergedGeoms = topo.objects.countries.geometries
     .filter(g => g.id !== "010");
   const mergedGeo = merge(topo, mergedGeoms);
   const mergedD = path(mergedGeo);
+
+  // Filtered merged path: only major continental landmasses
+  const majorMergedGeo = {
+    type: "MultiPolygon",
+    coordinates: majorContinents.map(c => c.polygon.coordinates),
+  };
+  const majorMergedD = path(majorMergedGeo);
 
   const strokeW = isRegional ? 0.5 : 0.35;
   const landFill = landOutline ? "none" : "#e4e2dc";
@@ -177,8 +225,8 @@ export function renderRegionSvg(regionKey, points, opts = {}) {
     .map((f) => {
       const d = path(f);
       if (!d) return "";
-      const area = d3.geoArea(f);
-      return `<path d="${d}" fill="${landFill}" stroke="${landStroke}" stroke-width="${landStrokeW}" data-country-id="${f.id}" data-area="${area.toExponential(3)}"/>`;
+      const onMajor = continentTags[f.id] ? "1" : "0";
+      return `<path d="${d}" fill="${landFill}" stroke="${landStroke}" stroke-width="${landStrokeW}" data-country-id="${f.id}" data-major="${onMajor}"/>`;
     })
     .join("\n");
 
@@ -203,7 +251,8 @@ export function renderRegionSvg(regionKey, points, opts = {}) {
   ${clipDef}
   ${bgRect}
   <g class="land"${clipAttr}>${pathElements}
-${mergedD ? `<path d="${mergedD}" fill="${landFill}" stroke="${landStroke}" stroke-width="${landStrokeW}" data-merged-land="1" display="none"/>` : ''}</g>
+${mergedD ? `<path d="${mergedD}" fill="${landFill}" stroke="${landStroke}" stroke-width="${landStrokeW}" data-merged-land="1" data-merged-mode="full" display="none"/>` : ''}
+${majorMergedD ? `<path d="${majorMergedD}" fill="${landFill}" stroke="${landStroke}" stroke-width="${landStrokeW}" data-merged-land="1" data-merged-mode="major" display="none"/>` : ''}</g>
   <g class="points">${circles}</g>
 </svg>`;
 }
