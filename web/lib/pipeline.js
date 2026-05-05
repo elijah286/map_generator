@@ -1,4 +1,4 @@
-import { loadUserEvents, loadUniversities } from "./excel.js";
+import { loadUserEvents, loadUniversities, readExcelCache, writeExcelCache } from "./excel.js";
 import { geocodeAll } from "./geocode.js";
 import { renderRegionSvg, REGION_SUFFIX } from "./maps.js";
 
@@ -21,6 +21,13 @@ export async function runPipeline(buffer, options, log) {
     cachePath,
   } = options;
 
+  // Merge Excel-embedded cache into server cache
+  const excelCache = readExcelCache(buffer);
+  const excelCacheCount = Object.keys(excelCache).length;
+  if (excelCacheCount > 0) {
+    log?.(`Loaded ${excelCacheCount} cached locations from Excel "cache" sheet.`);
+  }
+
   let rows;
   if (mode === "user_events") {
     rows = loadUserEvents(buffer, sheetName, onlyOnMap);
@@ -30,12 +37,18 @@ export async function runPipeline(buffer, options, log) {
 
   if (!rows.length) {
     log?.("No rows to plot after filtering.");
-    return { files: [], plotted: 0 };
+    return { files: [], plotted: 0, updatedExcel: null };
   }
 
-  const allRows = await geocodeAll(rows, cachePath, apiKey, log);
+  const allRows = await geocodeAll(rows, cachePath, apiKey, log, excelCache);
   const geocoded = allRows.filter((r) => r._geocoded);
   log?.(`${geocoded.length} locations with coordinates.`);
+
+  // Write updated cache back into the Excel file
+  const { loadCache } = await import("./geocode.js");
+  const serverCache = loadCache(cachePath);
+  const mergedCache = { ...serverCache, ...excelCache };
+  const updatedExcel = writeExcelCache(buffer, mergedCache);
 
   const base = basename.replace(/[^\w\-]+/g, "_") || "map";
   const files = [];
@@ -56,5 +69,5 @@ export async function runPipeline(buffer, options, log) {
     onMap: r._geocoded,
   }));
 
-  return { files, plotted: geocoded.length, details };
+  return { files, plotted: geocoded.length, details, updatedExcel };
 }

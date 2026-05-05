@@ -293,6 +293,13 @@ async function generate() {
     generatedDetails = data.details || [];
     populateResultsTable(generatedDetails);
     showMaps(data);
+
+    // Store updated Excel with embedded cache for re-upload
+    if (data.updatedExcel) {
+      const bytes = Uint8Array.from(atob(data.updatedExcel), c => c.charCodeAt(0));
+      const blob = new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      currentFile = new File([blob], currentFile.name, { type: blob.type });
+    }
   } catch (e) {
     errorHint.textContent = String(e.message || e);
     errorHint.hidden = false;

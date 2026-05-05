@@ -3,9 +3,55 @@
  */
 import XLSX from "xlsx";
 
+const CACHE_SHEET = "cache";
+
 export function getSheetNames(buffer) {
   const wb = XLSX.read(buffer, { type: "buffer" });
-  return wb.SheetNames;
+  return wb.SheetNames.filter((n) => n !== CACHE_SHEET);
+}
+
+/**
+ * Read geocode cache from a hidden sheet in the workbook.
+ * Returns { "Location String": [lat, lon], ... }
+ */
+export function readExcelCache(buffer) {
+  try {
+    const wb = XLSX.read(buffer, { type: "buffer" });
+    if (!wb.SheetNames.includes(CACHE_SHEET)) return {};
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[CACHE_SHEET], { defval: "" });
+    const cache = {};
+    for (const row of rows) {
+      const loc = String(row.location || "").trim();
+      const lat = parseFloat(row.lat);
+      const lon = parseFloat(row.lon);
+      if (loc && Number.isFinite(lat) && Number.isFinite(lon)) {
+        cache[loc] = [lat, lon];
+      }
+    }
+    return cache;
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Write geocode cache into a hidden sheet in the workbook.
+ * Returns the updated Excel buffer.
+ */
+export function writeExcelCache(buffer, cache) {
+  const wb = XLSX.read(buffer, { type: "buffer" });
+  const rows = Object.entries(cache).map(([location, coords]) => ({
+    location,
+    lat: coords[0],
+    lon: coords[1],
+  }));
+  const ws = XLSX.utils.json_to_sheet(rows);
+  if (wb.SheetNames.includes(CACHE_SHEET)) {
+    wb.Sheets[CACHE_SHEET] = ws;
+  } else {
+    XLSX.utils.book_append_sheet(wb, ws, CACHE_SHEET);
+  }
+  return XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
 }
 
 function findMemberCount(row) {

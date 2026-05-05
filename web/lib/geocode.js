@@ -89,8 +89,8 @@ export async function geocodeLocation(locationString, cache, cachePath, apiKey, 
   return null;
 }
 
-export async function geocodeAll(rows, cachePath, apiKey, log) {
-  const cache = loadCache(cachePath);
+export async function geocodeAll(rows, cachePath, apiKey, log, excelCache = {}) {
+  const cache = { ...loadCache(cachePath), ...excelCache };
   const out = [];
   for (const row of rows) {
     const c = await geocodeLocation(row.LocationString, cache, cachePath, apiKey, log);

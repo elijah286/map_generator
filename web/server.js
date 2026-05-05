@@ -126,7 +126,7 @@ app.post("/api/generate", upload.single("file"), async (req, res) => {
     const logs = [];
     const log = (msg) => logs.push(`[${new Date().toISOString()}] ${msg}`);
 
-    const { files, plotted, details } = await runPipeline(req.file.buffer, {
+    const { files, plotted, details, updatedExcel } = await runPipeline(req.file.buffer, {
       sheetName,
       mode,
       onlyOnMap,
@@ -151,6 +151,7 @@ app.post("/api/generate", upload.single("file"), async (req, res) => {
         filename: f.filename,
         svg: f.svg,
       })),
+      updatedExcel: updatedExcel ? Buffer.from(updatedExcel).toString("base64") : null,
     });
   } catch (e) {
     console.error(e);
