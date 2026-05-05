@@ -1,0 +1,514 @@
+{
+  "Rio de Janeiro, Rio de Janeiro, Brazil": [
+    -22.9068,
+    -43.1729
+  ],
+  "Calgary, Alberta, Canada": [
+    51.05,
+    -114.06
+  ],
+  "Vancouver, British Columbia, Canada": [
+    49.2827,
+    -123.1207
+  ],
+  "Montreal, Quebec, Canada": [
+    45.5,
+    -73.56
+  ],
+  "Santiago, Santiago, Chile": [
+    -33.45,
+    -70.66
+  ],
+  "Mexico City, Federal District, Mexico": [
+    19.43,
+    -99.13
+  ],
+  "Huntsville, Alabama, United States": [
+    34.7304,
+    -86.5861
+  ],
+  "Irvine, California, United States": [
+    33.6846,
+    -117.8265
+  ],
+  "Los Angeles, California, United States": [
+    34.05,
+    -118.25
+  ],
+  "Mohave Desert, California, United States": [
+    35.01,
+    -115.4731
+  ],
+  "Sacramento, California, United States": [
+    38.58,
+    -121.49
+  ],
+  "San Diego, California, United States": [
+    32.7157,
+    -117.1611
+  ],
+  "San Francisco, California, United States": [
+    37.77,
+    -122.41
+  ],
+  "Denver, Colorado, United States": [
+    39.74,
+    -104.99
+  ],
+  "Hartford, Connecticut, United States": [
+    41.76,
+    -72.68
+  ],
+  "Cape Canaveral, Florida, United States": [
+    28.3922,
+    -80.6077
+  ],
+  "Gainesville, Florida, United States": [
+    29.6516,
+    -82.3248
+  ],
+  "Orlando, Florida, United States": [
+    28.5383,
+    -81.3792
+  ],
+  "Chicago, Illinois, United States": [
+    41.8781,
+    -87.6298
+  ],
+  "Indianapolis, Indiana, United States": [
+    39.77,
+    -86.15
+  ],
+  "Louisville, Kentucky, United States": [
+    38.25,
+    -85.76
+  ],
+  "Aberdeen, Maryland, United States": [
+    39.5096,
+    -76.1644
+  ],
+  "Goddard, Maryland, United States": [
+    38.9936,
+    -76.8521
+  ],
+  "Boston, Massachusetts, United States": [
+    42.36,
+    -71.06
+  ],
+  "Marlborough, Massachusetts, United States": [
+    42.3459,
+    -71.5523
+  ],
+  "Ann Arbor, Michigan, United States": [
+    42.2808,
+    -83.743
+  ],
+  "Auburn Hills, Michigan, United States": [
+    42.6875,
+    -83.2348
+  ],
+  "Minneapolis, Minnesota, United States": [
+    44.98,
+    -93.27
+  ],
+  "Omaha, Nebraska, United States": [
+    41.2565,
+    -95.9345
+  ],
+  "Albuquerque, New Mexico, United States": [
+    35.0844,
+    -106.6506
+  ],
+  "Buffalo, New York, United States": [
+    42.8864,
+    -78.8784
+  ],
+  "Dayton, Ohio, United States": [
+    39.7589,
+    -84.1916
+  ],
+  "Portland, Oregon, United States": [
+    45.52,
+    -122.68
+  ],
+  "Pittsburgh, Pennsylvania, United States": [
+    40.44,
+    -79.99
+  ],
+  "Tullahoma, Tennessee, United States": [
+    35.3622,
+    -86.2094
+  ],
+  "Austin, Texas, United States": [
+    30.2672,
+    -97.7431
+  ],
+  "Dallas, Texas, United States": [
+    32.77,
+    -96.79
+  ],
+  "Fort Worth, Texas, United States": [
+    32.7555,
+    -97.3308
+  ],
+  "Clearfield, Utah, United States": [
+    41.1101,
+    -112.026
+  ],
+  "Salt Lake City, Utah, United States": [
+    40.7608,
+    -111.891
+  ],
+  "Bellevue, Washington, United States": [
+    47.6104,
+    -122.2007
+  ],
+  "Milwaukee, Wisconsin, United States": [
+    43.04,
+    -87.91
+  ],
+  "Sydney, New South Wales, Australia": [
+    -33.87,
+    151.21
+  ],
+  "Melbourne, Victoria, Australia": [
+    -37.8136,
+    144.9631
+  ],
+  "Beijing, Beijing, China": [
+    39.9,
+    116.41
+  ],
+  "Shanghai, Shanghai, China": [
+    31.2304,
+    121.4737
+  ],
+  "Bangalore, Karnataka, India": [
+    12.9716,
+    77.5946
+  ],
+  "Nagpur, Maharashtra, India": [
+    21.15,
+    79.09
+  ],
+  "Delhi, North Capital Territory, India": [
+    28.6139,
+    77.209
+  ],
+  "Chennai, Tamil Nadu, India": [
+    13.0827,
+    80.2707
+  ],
+  "Hyderabad, Telangana, India": [
+    17.385,
+    78.4867
+  ],
+  "Kolkata, West Bengal, India": [
+    22.5726,
+    88.3639
+  ],
+  "Jakarta, Jakarta, Indonesia": [
+    -6.2088,
+    106.8456
+  ],
+  "Tokyo, Tokyo, Japan": [
+    35.68,
+    139.76
+  ],
+  "Penang, Penang, Malaysia": [
+    5.4164,
+    100.3329
+  ],
+  "Auckland, Auckand, New Zealand": [
+    -36.8485,
+    174.7633
+  ],
+  "Hanoi, Hanoi, Vietnam": [
+    21.0285,
+    105.8542
+  ],
+  "Villach, Carinthia, Austria": [
+    46.6103,
+    13.8554
+  ],
+  "Graz, Styria, Austria": [
+    47.0707,
+    15.4395
+  ],
+  "Copenhagen, Capital Region, Denmark": [
+    55.68,
+    12.57
+  ],
+  "Cairo, Cairo, Egypt": [
+    30.04,
+    31.24
+  ],
+  "Grenoble, Isère, France": [
+    45.1885,
+    5.7245
+  ],
+  "Esslingen, Baden-Württemberg, Germany": [
+    48.7408,
+    9.3169
+  ],
+  "Frankfurt am Main, Bavaria, Germany": [
+    50.1109,
+    8.6821
+  ],
+  "Munich, Bavaria, Germany": [
+    48.1351,
+    11.582
+  ],
+  "Stuttgart, Bavaria, Germany": [
+    48.7758,
+    9.1829
+  ],
+  "Würzburg, Bavaria, Germany": [
+    49.79,
+    9.93
+  ],
+  "Berlin, Berlin, Germany": [
+    52.52,
+    13.4
+  ],
+  "Hamburg, Hamburg, Germany": [
+    53.55,
+    10
+  ],
+  "Dusseldorf, North Rhine–Westphalia Land, Germany": [
+    51.22,
+    6.78
+  ],
+  "Dublin, Leinster, Ireland": [
+    53.349805,
+    -6.26031
+  ],
+  "Tel Aviv, Tel Aviv District, Israel": [
+    32.0853,
+    34.7818
+  ],
+  "Milan, Milan, Italy": [
+    45.4642,
+    9.19
+  ],
+  "Eindhoven, North Brabant, Netherlands": [
+    51.4416,
+    5.4697
+  ],
+  "Copenhagen, Scandinavia, Nordics": [
+    55.68,
+    12.57
+  ],
+  "Krakow, Małopolskie województwo, Poland": [
+    50.0647,
+    19.945
+  ],
+  "Warsaw, Mazowieckie Province, Poland": [
+    52.23,
+    21.01
+  ],
+  "Katowice, Silesian Voivodeship, Poland": [
+    50.26,
+    19.02
+  ],
+  "Bucharest, Bucharest, Romania": [
+    44.43,
+    26.1
+  ],
+  "Belgrade, Belgrade, Serbia": [
+    44.79,
+    20.47
+  ],
+  "Bilbao, Basque Country, Spain": [
+    43.26,
+    -2.93
+  ],
+  "Barcelona, Catalonia, Spain": [
+    41.39,
+    2.16
+  ],
+  "Malmo, Skåne County, Sweden": [
+    55.604981,
+    13.003822
+  ],
+  "Stockholm, Stockholm County, Sweden": [
+    59.3293,
+    18.0686
+  ],
+  "Gothenburg, Västra Götaland County, Sweden": [
+    57.7089,
+    11.9746
+  ],
+  "Baden, Aargau, Switzerland": [
+    47.4733,
+    8.3055
+  ],
+  "Geneva, Romandie, Switzerland": [
+    46.2044,
+    6.1432
+  ],
+  "Zurich, Zurich, Switzerland": [
+    47.37,
+    8.54
+  ],
+  "Bedford, Bedfordshire, UK": [
+    52.1359,
+    -0.4667
+  ],
+  "Cambridge, Cambridgeshire, UK": [
+    52.2053,
+    0.1218
+  ],
+  "Gloucester, Gloucestershire, UK": [
+    51.8642,
+    -2.2382
+  ],
+  "Manchester, Greater Manchester, UK": [
+    53.4808,
+    -2.2426
+  ],
+  "Sheffield, South Yorkshire, UK": [
+    53.3811,
+    -1.4701
+  ],
+  "Newcastle upon Tyne, Tyne and Wear, UK": [
+    54.9783,
+    -1.6177
+  ],
+  "Newbury, West Berkshire, UK": [
+    51.4014,
+    -1.3231
+  ],
+  "York, Yorkshire, UK": [
+    53.9591,
+    -1.0815
+  ],
+  "Didcot, Oxfordshire, UK": [
+    51.6081,
+    -1.2446
+  ],
+  "San Jose, Costa Rica": [
+    9.93,
+    -84.08
+  ],
+  "Guadalajara, Centro, Mexico": [
+    20.6761,
+    -103.3475
+  ],
+  "Phoenix, Arizona, United States": [
+    33.45,
+    -112.07
+  ],
+  "Tucson, Arizona, United States": [
+    32.2226,
+    -110.9747
+  ],
+  "Pasadena, California, United States": [
+    34.1478,
+    -118.1445
+  ],
+  "Fort Collins, Colorado, United States": [
+    40.5853,
+    -105.0844
+  ],
+  "St. Louis, Missouri, United States": [
+    38.63,
+    -90.2
+  ],
+  "Long Island, New York, United States": [
+    40.789142,
+    -73.13496
+  ],
+  "Raleigh, North Carolina, United States": [
+    35.7796,
+    -78.6382
+  ],
+  "Charlotte, North Carolina, United States": [
+    35.23,
+    -80.84
+  ],
+  "Durham, North Carolina, United States": [
+    35.994,
+    -78.8986
+  ],
+  "Cleveland, Ohio, United States": [
+    41.4993,
+    -81.6944
+  ],
+  "Houston, Texas, United States": [
+    29.76,
+    -95.37
+  ],
+  "OKC, Oklahoma, United States": [
+    35.46,
+    -97.51
+  ],
+  "San Antonio, Texas, United States": [
+    29.4241,
+    -98.4936
+  ],
+  "Madison, Wisconsin, United States": [
+    43.0731,
+    -89.4012
+  ],
+  "Mexico City, Mexico": [
+    19.43,
+    -99.13
+  ],
+  "New York, New York, United States": [
+    40.7128,
+    -74.006
+  ],
+  "Bethesda, Maryland, United States": [
+    38.98,
+    -77.1
+  ],
+  "Detroit, Michigan, United States": [
+    42.33,
+    -83.05
+  ],
+  "Abbott Park, Illinois, United States": [
+    42.3125,
+    -87.8419
+  ],
+  "Hillsboro, Oregon, United States": [
+    45.5229,
+    -122.9898
+  ],
+  "Aukland, Aukland, New Zealand": [
+    -36.8485,
+    174.7633
+  ],
+  "Suzhou, Jiangsu, China": [
+    31.2989,
+    120.5853
+  ],
+  "Dongguan, Guangdong, China": [
+    23.0205,
+    113.7518
+  ],
+  "Hangzhou, Zhejiang, China": [
+    30.2741,
+    120.1551
+  ],
+  "Singapore, Singapore, Singapore": [
+    1.3521,
+    103.8198
+  ],
+  "Friedrichshafen, Baden-Württemberg, Germany": [
+    47.65,
+    9.48
+  ],
+  "Wuppertal, North Rhine-Westphalia, Germany": [
+    51.26,
+    7.18
+  ],
+  "Delft, South Holland, Netherlands": [
+    52.0116,
+    4.3571
+  ],
+  "Birmingham, West Midlands, UK": [
+    52.4862,
+    -1.8904
+  ]
+}
