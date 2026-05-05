@@ -32,8 +32,8 @@ const outlineWidthVal    = $("#outlineWidthVal");
 const bgColorInput  = $("#bgColor");
 const bgColorHex    = $("#bgColorHex");
 const includeAntarcticaCheck = $("#includeAntarctica");
-const detailSlider  = $("#mapDetail");
-const detailVal     = $("#detailVal");
+const showCountriesCheck = $("#showCountries");
+const showSmallLandCheck = $("#showSmallLand");
 
 // Progress state elements
 const progressState   = $("#progressState");
@@ -56,6 +56,7 @@ const mapState     = $("#mapState");
 const tabBar       = $("#tabBar");
 const mapViewport  = $("#mapViewport");
 const dlBtn        = $("#dlBtn");
+const dlExcelBtn   = $("#dlExcelBtn");
 
 // Overlay
 const locOverlay  = $("#locOverlay");
@@ -374,6 +375,13 @@ async function generate() {
       const bytes = Uint8Array.from(atob(resultData.updatedExcel), c => c.charCodeAt(0));
       const blob = new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
       currentFile = new File([blob], currentFile.name, { type: blob.type });
+
+      // Offer download of updated Excel with embedded cache
+      if (dlExcelBtn._blobUrl) URL.revokeObjectURL(dlExcelBtn._blobUrl);
+      dlExcelBtn._blobUrl = URL.createObjectURL(blob);
+      dlExcelBtn.href = dlExcelBtn._blobUrl;
+      dlExcelBtn.download = currentFile.name;
+      dlExcelBtn.hidden = false;
     }
   } catch (e) {
     errorHint.innerHTML = String(e.message).includes("OPENAI_API_KEY")
@@ -529,24 +537,6 @@ function darkenHex(hex, factor = 0.5) {
 }
 
 // ── Apply live settings to inline SVG ───────────────
-// Area thresholds (steradians) for each detail level
-const AREA_THRESHOLDS = {
-  100: 0,       // show everything
-  75: 0.0001,   // hide tiny micro-islands
-  50: 0.002,    // hide small islands + small countries
-  25: 0.012,    // only major countries
-  0: Infinity,  // hide all individual paths (merged landmass only)
-};
-
-function getAreaThreshold(pct) {
-  // Map slider % to the nearest threshold at or below
-  const levels = [0, 25, 50, 75, 100];
-  let best = 0;
-  for (const lvl of levels) {
-    if (lvl <= pct) best = lvl;
-  }
-  return AREA_THRESHOLDS[best];
-}
 
 function applyLiveSettings() {
   const svg = mapViewport.querySelector("svg");
@@ -574,12 +564,10 @@ function applyLiveSettings() {
     c.setAttribute("stroke", stroke);
   });
 
-  // Detail level: area-based visibility filtering
-  const detailPct = parseFloat(detailSlider.value);
-  const areaThreshold = getAreaThreshold(detailPct);
-  const showMerged = detailPct < 1; // level 0: show merged landmass only
-
   // Land paths
+  const showCountries = showCountriesCheck.checked;
+  const showSmallLand = showSmallLandCheck.checked;
+
   svg.querySelectorAll("g.land path").forEach((p) => {
     const baseSw = parseFloat(p.dataset.baseSw) || 0.35;
     p.setAttribute("stroke-width", (baseSw * outMul).toFixed(2));
@@ -592,21 +580,28 @@ function applyLiveSettings() {
       return;
     }
 
-    // Merged landmass path: only visible at detail level 0
+    // Merged landmass path: visible when country borders are hidden
     if (p.dataset.mergedLand === "1") {
-      p.setAttribute("display", showMerged ? "inline" : "none");
+      p.setAttribute("display", showCountries ? "none" : "inline");
       return;
     }
 
-    // Hide individual paths at level 0 (merged path takes over)
-    if (showMerged) {
+    // Individual country paths
+    if (!showCountries) {
       p.setAttribute("display", "none");
       return;
     }
 
-    // Area-based filtering: hide features below threshold
-    const area = parseFloat(p.dataset.area) || 0;
-    p.setAttribute("display", area >= areaThreshold ? "inline" : "none");
+    // Small land masses filter
+    if (!showSmallLand) {
+      const area = parseFloat(p.dataset.area) || 0;
+      if (area < 0.002) {
+        p.setAttribute("display", "none");
+        return;
+      }
+    }
+
+    p.setAttribute("display", "inline");
   });
 
   // Viewport background
@@ -625,7 +620,8 @@ const _visualControls = [
   [landOutlineColorInput, "input", () => { landOutlineColorHex.textContent = landOutlineColorInput.value; }],
   [bgColorInput, "input", () => { bgColorHex.textContent = bgColorInput.value; }],
   [includeAntarcticaCheck, "change", null],
-  [detailSlider, "input", () => { detailVal.textContent = `${detailSlider.value}%`; }],
+  [showCountriesCheck, "change", null],
+  [showSmallLandCheck, "change", null],
 ];
 _visualControls.forEach(([el, evt, extra]) => {
   el.addEventListener(evt, () => {

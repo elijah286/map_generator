@@ -1,6 +1,5 @@
 /**
  * SVG maps via d3-geo + Natural Earth (110m for world, 50m for regions).
- * Detail slider hides/shows features by area; level 0 merges all borders.
  */
 import { readFileSync } from "fs";
 import { fileURLToPath } from "url";
@@ -160,10 +159,10 @@ export function renderRegionSvg(regionKey, points, opts = {}) {
   const path = d3.geoPath(projection);
   const clipDef = buildClipDef(regionKey, projection, extent);
 
-  // Merged landmass path for detail level 0 (dissolves all internal borders)
+  // Merged landmass path (no internal country borders)
   const topo = loadTopo(topoPath);
   const mergedGeoms = topo.objects.countries.geometries
-    .filter(g => g.id !== "010"); // exclude Antarctica
+    .filter(g => g.id !== "010");
   const mergedGeo = merge(topo, mergedGeoms);
   const mergedD = path(mergedGeo);
 
@@ -172,8 +171,6 @@ export function renderRegionSvg(regionKey, points, opts = {}) {
   const landStroke = landOutline && landOutlineColor ? landOutlineColor : "#b8b6b0";
   const landStrokeW = landOutline ? (isRegional ? 1 : 0.7) : strokeW;
 
-  // Build paths: each feature keeps its full-detail geometry.
-  // data-area is used client-side to filter visibility at different detail levels.
   const featureFilter = (f) => includeAntarctica || f.id !== "010";
   const pathElements = landFc.features
     .filter(featureFilter)
