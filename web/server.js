@@ -111,6 +111,8 @@ app.post("/api/generate", upload.single("file"), async (req, res) => {
     const removeOcean = req.body.removeOcean === "true" || req.body.removeOcean === true;
     const landOutline = req.body.landOutline === "true" || req.body.landOutline === true;
     const landOutlineColor = /^#[0-9a-fA-F]{6}$/.test(req.body.landOutlineColor) ? req.body.landOutlineColor : null;
+    const dotSizeMultiplier = Math.max(0.1, Math.min(10, parseFloat(req.body.dotSizeMultiplier) || 1));
+    const outlineWidthMultiplier = Math.max(0.1, Math.min(10, parseFloat(req.body.outlineWidthMultiplier) || 1));
 
     let regions;
     try {
@@ -131,6 +133,8 @@ app.post("/api/generate", upload.single("file"), async (req, res) => {
       onlyOnMap,
       useMemberSize,
       dotColor,
+      dotSizeMultiplier,
+      outlineWidthMultiplier,
       removeOcean,
       landOutline,
       landOutlineColor,

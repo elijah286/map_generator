@@ -25,6 +25,10 @@ const landOutlineCheck     = $("#landOutline");
 const landOutlineColorField = $("#landOutlineColorField");
 const landOutlineColorInput = $("#landOutlineColor");
 const landOutlineColorHex   = $("#landOutlineColorHex");
+const dotSizeSlider    = $("#dotSize");
+const dotSizeVal       = $("#dotSizeVal");
+const outlineWidthSlider = $("#outlineWidth");
+const outlineWidthVal    = $("#outlineWidthVal");
 
 // Steps
 const step1 = $("#step1");
@@ -261,6 +265,8 @@ async function generate() {
   fd.append("onlyOnMap", String(onlyOnMap.checked));
   fd.append("useMemberSize", String($("#useMemberSize").checked));
   fd.append("dotColor", dotColorInput.value);
+  fd.append("dotSizeMultiplier", dotSizeSlider.value);
+  fd.append("outlineWidthMultiplier", outlineWidthSlider.value);
   fd.append("removeOcean", String(removeOceanCheck.checked));
   fd.append("landOutline", String(landOutlineCheck.checked));
   if (landOutlineCheck.checked) {
@@ -396,15 +402,75 @@ function esc(s) {
 // ── Dot color ───────────────────────────────────────
 dotColorInput.addEventListener("input", () => {
   dotColorHex.textContent = dotColorInput.value;
+  liveRegenerate();
 });
 
 // ── Land outline toggle & color ─────────────────────
 landOutlineCheck.addEventListener("change", () => {
   landOutlineColorField.hidden = !landOutlineCheck.checked;
+  liveRegenerate();
 });
 landOutlineColorInput.addEventListener("input", () => {
   landOutlineColorHex.textContent = landOutlineColorInput.value;
+  liveRegenerate();
 });
+
+// ── Sliders ─────────────────────────────────────────
+dotSizeSlider.addEventListener("input", () => {
+  dotSizeVal.textContent = `${parseFloat(dotSizeSlider.value).toFixed(1)}×`;
+  liveRegenerate();
+});
+outlineWidthSlider.addEventListener("input", () => {
+  outlineWidthVal.textContent = `${parseFloat(outlineWidthSlider.value).toFixed(1)}×`;
+  liveRegenerate();
+});
+
+removeOceanCheck.addEventListener("change", () => liveRegenerate());
+$("#useMemberSize").addEventListener("change", () => liveRegenerate());
+
+// ── Live regenerate (debounced) ─────────────────────
+let _liveTimer = null;
+let _liveAbort = null;
+function liveRegenerate() {
+  if (!generatedMaps.length || !currentFile) return;
+  if (_liveTimer) clearTimeout(_liveTimer);
+  _liveTimer = setTimeout(() => doLiveRegenerate(), 350);
+}
+
+async function doLiveRegenerate() {
+  if (_liveAbort) _liveAbort.abort();
+  const controller = new AbortController();
+  _liveAbort = controller;
+
+  const regions = $$(" .region:checked").map((c) => c.value);
+  if (!regions.length) return;
+
+  const fd = new FormData();
+  fd.append("file", currentFile);
+  fd.append("sheetName", sheetSelect.value);
+  fd.append("mode", modeSelect.value);
+  fd.append("onlyOnMap", String(onlyOnMap.checked));
+  fd.append("useMemberSize", String($("#useMemberSize").checked));
+  fd.append("dotColor", dotColorInput.value);
+  fd.append("dotSizeMultiplier", dotSizeSlider.value);
+  fd.append("outlineWidthMultiplier", outlineWidthSlider.value);
+  fd.append("removeOcean", String(removeOceanCheck.checked));
+  fd.append("landOutline", String(landOutlineCheck.checked));
+  if (landOutlineCheck.checked) fd.append("landOutlineColor", landOutlineColorInput.value);
+  fd.append("basename", "map");
+  fd.append("regions", JSON.stringify(regions));
+
+  try {
+    const res = await fetch("/api/generate", { method: "POST", body: fd, signal: controller.signal });
+    const data = await res.json();
+    if (!res.ok || controller.signal.aborted) return;
+    generatedDetails = data.details || [];
+    populateResultsTable(generatedDetails);
+    showMaps(data);
+  } catch (e) {
+    if (e.name === "AbortError") return;
+  }
+}
 
 // Init
 activateStep(1);

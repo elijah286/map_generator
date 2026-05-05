@@ -174,6 +174,43 @@ body {
   color: var(--muted);
 }
 
+/* ─── Range slider ─────────────────────────────────── */
+.range-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+  outline: none;
+  cursor: pointer;
+}
+.range-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: none;
+  cursor: pointer;
+}
+.range-slider::-moz-range-thumb {
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: none;
+  cursor: pointer;
+}
+.slider-val {
+  float: right;
+  font-size: .7rem;
+  font-family: "SF Mono", "Fira Code", monospace;
+  color: var(--accent-h);
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
 /* ─── Chips ────────────────────────────────────────── */
 .chip-row { display: flex; flex-wrap: wrap; gap: .35rem; }
 .chip {
@@ -342,7 +379,7 @@ body {
 .map-viewport {
   flex: 1;
   overflow: hidden;
-  background: #dde3ec;
+  background: var(--bg);
   position: relative;
   min-height: 0;
 }
