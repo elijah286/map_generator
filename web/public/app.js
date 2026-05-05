@@ -560,14 +560,14 @@ function applyLiveSettings() {
 
   // Detail level: pick the right simplified `d` attribute
   const detailPct = parseFloat(detailSlider.value);
-  // Find the appropriate detail level
+  let effectiveLevel = 100;
   let detailAttr = null; // null = use original d (100%)
   if (detailPct < 100) {
-    // Find the closest level at or below the slider value
     let best = DETAIL_LEVELS[0];
     for (const lvl of DETAIL_LEVELS) {
       if (lvl <= detailPct) best = lvl;
     }
+    effectiveLevel = best;
     detailAttr = `d-${best}`;
   }
 
@@ -581,6 +581,12 @@ function applyLiveSettings() {
     // Antarctica toggle
     if (p.dataset.isAntarctica === "1") {
       p.setAttribute("display", includeAntarcticaCheck.checked ? "inline" : "none");
+      return;
+    }
+
+    // Merged landmass path: only visible at detail level 0
+    if (p.dataset.mergedLand === "1") {
+      p.setAttribute("display", effectiveLevel === 0 ? "inline" : "none");
       return;
     }
 

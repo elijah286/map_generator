@@ -6,7 +6,7 @@ import { readFileSync } from "fs";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import * as d3 from "d3-geo";
-import { feature } from "topojson-client";
+import { feature, merge } from "topojson-client";
 import { presimplify, simplify, quantile } from "topojson-simplify";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -14,13 +14,19 @@ const TOPO_110 = join(__dirname, "../node_modules/world-atlas/countries-110m.jso
 const TOPO_50 = join(__dirname, "../node_modules/world-atlas/countries-50m.json");
 
 // Detail levels: quantile values for simplification (0 = max simplify, 1 = full detail)
-// Conservative thresholds so shapes stay recognizable at all levels
 const DETAIL_LEVELS = [0, 25, 50, 75];  // 100 is full detail (original)
 const DETAIL_QUANTILES = {
-  0:  0.15,   // simplified — still recognizable shapes
-  25: 0.25,   // moderate simplification
-  50: 0.40,   // light simplification
-  75: 0.60,   // mostly detailed
+  0:  0.03,   // aggressive — for merged continental outline
+  25: 0.06,   // visible simplification for large countries
+  50: 0.15,   // moderate
+  75: 0.35,   // light
+};
+
+// Area thresholds (steradians) — features smaller than this are hidden at that level
+const AREA_THRESHOLDS = {
+  75: 0.0001,  // hide only tiny micro-islands
+  50: 0.002,   // hide small islands + small countries
+  25: 0.012,   // only major countries remain
 };
 
 const _topoCache = {};
@@ -30,15 +36,23 @@ function loadTopo(path) {
   return _topoCache[path];
 }
 
+const _simplifiedTopoCache = {};
+function getSimplifiedTopology(topoPath, level) {
+  const cacheKey = `${topoPath}:topo:${level}`;
+  if (_simplifiedTopoCache[cacheKey]) return _simplifiedTopoCache[cacheKey];
+  const topo = loadTopo(topoPath);
+  const pre = presimplify({ ...topo, objects: { ...topo.objects } });
+  const q = quantile(pre, DETAIL_QUANTILES[level]);
+  const result = simplify(pre, q);
+  _simplifiedTopoCache[cacheKey] = result;
+  return result;
+}
+
 const _simplifiedCache = {};
 function getSimplifiedFeatures(topoPath, level) {
   const cacheKey = `${topoPath}:${level}`;
   if (_simplifiedCache[cacheKey]) return _simplifiedCache[cacheKey];
-
-  const topo = loadTopo(topoPath);
-  const pre = presimplify({ ...topo, objects: { ...topo.objects } });
-  const q = quantile(pre, DETAIL_QUANTILES[level]);
-  const simplified = simplify(pre, q);
+  const simplified = getSimplifiedTopology(topoPath, level);
   const fc = feature(simplified, simplified.objects.countries);
   _simplifiedCache[cacheKey] = fc;
   return fc;
@@ -193,6 +207,13 @@ export function renderRegionSvg(regionKey, points, opts = {}) {
     simplifiedPaths[level] = d3.geoPath(projection);
   }
 
+  // Merged landmass for detail level 0 (dissolves all internal borders)
+  const simplifiedTopo0 = getSimplifiedTopology(topoPath, 0);
+  const mergedGeoms = simplifiedTopo0.objects.countries.geometries
+    .filter(g => g.id !== "010"); // Antarctica handled separately
+  const mergedGeo = merge(simplifiedTopo0, mergedGeoms);
+  const mergedD = path(mergedGeo);
+
   const strokeW = isRegional ? 0.5 : 0.35;
   const landFill = landOutline ? "none" : "#e4e2dc";
   const landStroke = landOutline && landOutlineColor ? landOutlineColor : "#b8b6b0";
@@ -205,18 +226,24 @@ export function renderRegionSvg(regionKey, points, opts = {}) {
     .map((f, idx) => {
       const d = path(f);
       if (!d) return "";
+      const area = d3.geoArea(f);
 
-      // Build simplified d attributes
+      // Build simplified d attributes with area-based filtering
       const simplifiedAttrs = DETAIL_LEVELS.map((level) => {
+        // Level 0: all individual paths hidden (merged path takes over)
+        if (level === 0) return `data-d-0=""`;
+
+        // Area filtering: hide features below threshold for this level
+        const threshold = AREA_THRESHOLDS[level] || 0;
+        if (area < threshold) return `data-d-${level}=""`;
+
         const simpleFc = simplifiedFcs[level];
-        // Match by index — features are in the same order
         const simpleF = simpleFc.features.find(sf => sf.id === f.id);
         if (!simpleF) return `data-d-${level}=""`;
         const sd = simplifiedPaths[level](simpleF);
         return `data-d-${level}="${sd || ""}"`;
       }).join(" ");
 
-      const area = d3.geoArea(f);
       return `<path d="${d}" ${simplifiedAttrs} fill="${landFill}" stroke="${landStroke}" stroke-width="${landStrokeW}" data-country-id="${f.id}" data-area="${area.toExponential(3)}"/>`;
     })
     .join("\n");
@@ -241,7 +268,8 @@ export function renderRegionSvg(regionKey, points, opts = {}) {
 <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
   ${clipDef}
   ${bgRect}
-  <g class="land"${clipAttr}>${pathElements}</g>
+  <g class="land"${clipAttr}>${pathElements}
+${mergedD ? `<path d="${mergedD}" fill="${landFill}" stroke="${landStroke}" stroke-width="${landStrokeW}" data-merged-land="1" display="none"/>` : ''}</g>
   <g class="points">${circles}</g>
 </svg>`;
 }
