@@ -383,7 +383,8 @@ body {
   position: relative;
   min-height: 0;
 }
-.map-viewport img {
+.map-viewport img,
+.map-viewport svg {
   position: absolute;
   inset: 0;
   width: 100%;

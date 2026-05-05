@@ -29,6 +29,8 @@ const dotSizeSlider    = $("#dotSize");
 const dotSizeVal       = $("#dotSizeVal");
 const outlineWidthSlider = $("#outlineWidth");
 const outlineWidthVal    = $("#outlineWidthVal");
+const bgColorInput  = $("#bgColor");
+const bgColorHex    = $("#bgColorHex");
 
 // Steps
 const step1 = $("#step1");
@@ -265,8 +267,6 @@ async function generate() {
   fd.append("onlyOnMap", String(onlyOnMap.checked));
   fd.append("useMemberSize", String($("#useMemberSize").checked));
   fd.append("dotColor", dotColorInput.value);
-  fd.append("dotSizeMultiplier", dotSizeSlider.value);
-  fd.append("outlineWidthMultiplier", outlineWidthSlider.value);
   fd.append("removeOcean", String(removeOceanCheck.checked));
   fd.append("landOutline", String(landOutlineCheck.checked));
   if (landOutlineCheck.checked) {
@@ -303,12 +303,11 @@ async function generate() {
 function showMaps(data) {
   generatedMaps = (data.files || []).map((f) => {
     const regionKey = extractRegionKey(f.filename);
-    const blob = new Blob([f.svg], { type: "image/svg+xml" });
     return {
       regionKey,
       label: REGION_LABELS[regionKey] || f.filename,
       filename: f.filename,
-      blobUrl: URL.createObjectURL(blob),
+      rawSvg: f.svg,
     };
   });
 
@@ -337,13 +336,45 @@ function selectTab(regionKey) {
   const m = generatedMaps.find((x) => x.regionKey === regionKey);
   if (!m) return;
 
-  const img = document.createElement("img");
-  img.src = m.blobUrl;
-  img.alt = m.label;
-  mapViewport.innerHTML = "";
-  mapViewport.appendChild(img);
+  // Parse SVG string and embed inline for live manipulation
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(m.rawSvg, "image/svg+xml");
+  const svg = doc.documentElement;
+  svg.style.width = "100%";
+  svg.style.height = "100%";
+  svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
 
-  dlBtn.href = m.blobUrl;
+  // Store base radii + stroke widths so sliders can scale from originals
+  svg.querySelectorAll("g.points circle").forEach((c) => {
+    c.dataset.baseR = c.getAttribute("r");
+    c.dataset.baseSw = c.getAttribute("stroke-width");
+  });
+  svg.querySelectorAll("g.land path").forEach((p) => {
+    p.dataset.baseSw = p.getAttribute("stroke-width");
+    p.dataset.baseFill = p.getAttribute("fill");
+    p.dataset.baseStroke = p.getAttribute("stroke");
+  });
+
+  mapViewport.innerHTML = "";
+  mapViewport.appendChild(svg);
+
+  // Apply current slider/color settings instantly
+  applyLiveSettings();
+  updateDownloadLink();
+}
+
+function updateDownloadLink() {
+  const svg = mapViewport.querySelector("svg");
+  if (!svg || !activeTab) return;
+  const m = generatedMaps.find((x) => x.regionKey === activeTab);
+  if (!m) return;
+  // Serialize current SVG state (with live edits) for download
+  const serializer = new XMLSerializer();
+  const svgStr = '<?xml version="1.0" encoding="UTF-8"?>\n' + serializer.serializeToString(svg);
+  const blob = new Blob([svgStr], { type: "image/svg+xml" });
+  if (dlBtn._blobUrl) URL.revokeObjectURL(dlBtn._blobUrl);
+  dlBtn._blobUrl = URL.createObjectURL(blob);
+  dlBtn.href = dlBtn._blobUrl;
   dlBtn.download = m.filename;
   dlBtn.hidden = false;
 }
@@ -399,78 +430,71 @@ function esc(s) {
   return d.innerHTML;
 }
 
-// ── Dot color ───────────────────────────────────────
-dotColorInput.addEventListener("input", () => {
-  dotColorHex.textContent = dotColorInput.value;
-  liveRegenerate();
-});
-
-// ── Land outline toggle & color ─────────────────────
-landOutlineCheck.addEventListener("change", () => {
-  landOutlineColorField.hidden = !landOutlineCheck.checked;
-  liveRegenerate();
-});
-landOutlineColorInput.addEventListener("input", () => {
-  landOutlineColorHex.textContent = landOutlineColorInput.value;
-  liveRegenerate();
-});
-
-// ── Sliders ─────────────────────────────────────────
-dotSizeSlider.addEventListener("input", () => {
-  dotSizeVal.textContent = `${parseFloat(dotSizeSlider.value).toFixed(1)}×`;
-  liveRegenerate();
-});
-outlineWidthSlider.addEventListener("input", () => {
-  outlineWidthVal.textContent = `${parseFloat(outlineWidthSlider.value).toFixed(1)}×`;
-  liveRegenerate();
-});
-
-removeOceanCheck.addEventListener("change", () => liveRegenerate());
-$("#useMemberSize").addEventListener("change", () => liveRegenerate());
-
-// ── Live regenerate (debounced) ─────────────────────
-let _liveTimer = null;
-let _liveAbort = null;
-function liveRegenerate() {
-  if (!generatedMaps.length || !currentFile) return;
-  if (_liveTimer) clearTimeout(_liveTimer);
-  _liveTimer = setTimeout(() => doLiveRegenerate(), 350);
+// ── Client-side darken helper ───────────────────────
+function darkenHex(hex, factor = 0.5) {
+  const r = Math.round(parseInt(hex.slice(1, 3), 16) * factor);
+  const g = Math.round(parseInt(hex.slice(3, 5), 16) * factor);
+  const b = Math.round(parseInt(hex.slice(5, 7), 16) * factor);
+  return `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
 }
 
-async function doLiveRegenerate() {
-  if (_liveAbort) _liveAbort.abort();
-  const controller = new AbortController();
-  _liveAbort = controller;
+// ── Apply live settings to inline SVG ───────────────
+function applyLiveSettings() {
+  const svg = mapViewport.querySelector("svg");
+  if (!svg) return;
 
-  const regions = $$(" .region:checked").map((c) => c.value);
-  if (!regions.length) return;
+  const dotMul = parseFloat(dotSizeSlider.value) || 1;
+  const outMul = parseFloat(outlineWidthSlider.value) || 1;
+  const color = dotColorInput.value;
+  const stroke = darkenHex(color);
+  const ocean = removeOceanCheck.checked;
+  const outline = landOutlineCheck.checked;
+  const outlineColor = landOutlineColorInput.value;
 
-  const fd = new FormData();
-  fd.append("file", currentFile);
-  fd.append("sheetName", sheetSelect.value);
-  fd.append("mode", modeSelect.value);
-  fd.append("onlyOnMap", String(onlyOnMap.checked));
-  fd.append("useMemberSize", String($("#useMemberSize").checked));
-  fd.append("dotColor", dotColorInput.value);
-  fd.append("dotSizeMultiplier", dotSizeSlider.value);
-  fd.append("outlineWidthMultiplier", outlineWidthSlider.value);
-  fd.append("removeOcean", String(removeOceanCheck.checked));
-  fd.append("landOutline", String(landOutlineCheck.checked));
-  if (landOutlineCheck.checked) fd.append("landOutlineColor", landOutlineColorInput.value);
-  fd.append("basename", "map");
-  fd.append("regions", JSON.stringify(regions));
+  // Background rect (first rect child of svg)
+  const bgRect = svg.querySelector(":scope > rect");
+  if (bgRect) bgRect.setAttribute("display", ocean ? "none" : "inline");
 
-  try {
-    const res = await fetch("/api/generate", { method: "POST", body: fd, signal: controller.signal });
-    const data = await res.json();
-    if (!res.ok || controller.signal.aborted) return;
-    generatedDetails = data.details || [];
-    populateResultsTable(generatedDetails);
-    showMaps(data);
-  } catch (e) {
-    if (e.name === "AbortError") return;
-  }
+  // Dots
+  svg.querySelectorAll("g.points circle").forEach((c) => {
+    const baseR = parseFloat(c.dataset.baseR) || 4;
+    const baseSw = parseFloat(c.dataset.baseSw) || 0.5;
+    c.setAttribute("r", (baseR * dotMul).toFixed(2));
+    c.setAttribute("stroke-width", (baseSw * dotMul).toFixed(2));
+    c.setAttribute("fill", color);
+    c.setAttribute("stroke", stroke);
+  });
+
+  // Land paths
+  svg.querySelectorAll("g.land path").forEach((p) => {
+    const baseSw = parseFloat(p.dataset.baseSw) || 0.35;
+    p.setAttribute("stroke-width", (baseSw * outMul).toFixed(2));
+    p.setAttribute("fill", outline ? "none" : p.dataset.baseFill);
+    p.setAttribute("stroke", outline ? outlineColor : p.dataset.baseStroke);
+  });
+
+  // Viewport background
+  mapViewport.style.background = bgColorInput.value;
+
+  updateDownloadLink();
 }
+
+// ── Wire up all visual controls ─────────────────────
+const _visualControls = [
+  [dotColorInput, "input", () => { dotColorHex.textContent = dotColorInput.value; }],
+  [dotSizeSlider, "input", () => { dotSizeVal.textContent = `${parseFloat(dotSizeSlider.value).toFixed(1)}×`; }],
+  [outlineWidthSlider, "input", () => { outlineWidthVal.textContent = `${parseFloat(outlineWidthSlider.value).toFixed(1)}×`; }],
+  [removeOceanCheck, "change", null],
+  [landOutlineCheck, "change", () => { landOutlineColorField.hidden = !landOutlineCheck.checked; }],
+  [landOutlineColorInput, "input", () => { landOutlineColorHex.textContent = landOutlineColorInput.value; }],
+  [bgColorInput, "input", () => { bgColorHex.textContent = bgColorInput.value; }],
+];
+_visualControls.forEach(([el, evt, extra]) => {
+  el.addEventListener(evt, () => {
+    if (extra) extra();
+    applyLiveSettings();
+  });
+});
 
 // Init
 activateStep(1);

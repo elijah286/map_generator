@@ -11,8 +11,6 @@ export async function runPipeline(buffer, options, log) {
     onlyOnMap = true,
     useMemberSize = false,
     dotColor = null,
-    dotSizeMultiplier = 1,
-    outlineWidthMultiplier = 1,
     removeOcean = false,
     landOutline = false,
     landOutlineColor = null,
@@ -46,7 +44,7 @@ export async function runPipeline(buffer, options, log) {
     if (!want.has(key)) continue;
     const suf = REGION_SUFFIX[key];
     const filename = suf ? `${base}${suf}.svg` : `${base}.svg`;
-    const svg = renderRegionSvg(key, geocoded, { useMemberSize, dotColor, dotSizeMultiplier, outlineWidthMultiplier, removeOcean, landOutline, landOutlineColor });
+    const svg = renderRegionSvg(key, geocoded, { useMemberSize, dotColor, removeOcean, landOutline, landOutlineColor });
     files.push({ filename, svg });
   }
 

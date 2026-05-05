@@ -104,7 +104,7 @@ function darkenHex(hex, factor = 0.5) {
 }
 
 export function renderRegionSvg(regionKey, points, opts = {}) {
-  const { useMemberSize = false, dotColor = null, dotSizeMultiplier = 1, outlineWidthMultiplier = 1, removeOcean = false, landOutline = false, landOutlineColor = null } = opts;
+  const { useMemberSize = false, dotColor = null, removeOcean = false, landOutline = false, landOutlineColor = null } = opts;
   const fill = dotColor || "#1a7f37";
   const stroke = dotColor ? darkenHex(dotColor) : "#0d3d1a";
   const isRegional = regionKey !== "world";
@@ -145,10 +145,10 @@ export function renderRegionSvg(regionKey, points, opts = {}) {
     }
   }
 
-  const strokeW = (isRegional ? 0.5 : 0.35) * outlineWidthMultiplier;
+  const strokeW = isRegional ? 0.5 : 0.35;
   const landFill = landOutline ? "none" : "#e4e2dc";
   const landStroke = landOutline && landOutlineColor ? landOutlineColor : "#b8b6b0";
-  const landStrokeW = (landOutline ? (isRegional ? 1 : 0.7) : strokeW) * outlineWidthMultiplier;
+  const landStrokeW = landOutline ? (isRegional ? 1 : 0.7) : strokeW;
 
   const paths = landFc.features
     .map((f) => {
@@ -164,8 +164,8 @@ export function renderRegionSvg(regionKey, points, opts = {}) {
       if (!xy || xy.some((n) => !Number.isFinite(n))) return "";
       const [x, y] = xy;
       if (x < -10 || x > width + 10 || y < -10 || y > height + 10) return "";
-      const r = pointRadius(useMemberSize, p.MemberCount, isRegional) * dotSizeMultiplier;
-      const sw = (isRegional ? 0.7 : 0.5) * dotSizeMultiplier;
+      const r = pointRadius(useMemberSize, p.MemberCount, isRegional);
+      const sw = isRegional ? 0.7 : 0.5;
       return `<circle cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="${r.toFixed(2)}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" opacity="0.9"/>`;
     })
     .filter(Boolean)
