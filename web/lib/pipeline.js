@@ -4,7 +4,7 @@ import { renderRegionSvg, REGION_SUFFIX } from "./maps.js";
 
 const REGION_ORDER = ["world", "europe", "asia", "north_america", "south_america"];
 
-export async function runPipeline(buffer, options, log) {
+export async function runPipeline(buffer, options, log, onProgress) {
   const {
     sheetName,
     mode,
@@ -40,7 +40,7 @@ export async function runPipeline(buffer, options, log) {
     return { files: [], plotted: 0, updatedExcel: null };
   }
 
-  const allRows = await geocodeAll(rows, cachePath, apiKey, log, excelCache);
+  const allRows = await geocodeAll(rows, cachePath, apiKey, log, excelCache, onProgress);
   const geocoded = allRows.filter((r) => r._geocoded);
   log?.(`${geocoded.length} locations with coordinates.`);
 

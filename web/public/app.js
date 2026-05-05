@@ -35,6 +35,13 @@ const includeAntarcticaCheck = $("#includeAntarctica");
 const detailSlider  = $("#mapDetail");
 const detailVal     = $("#detailVal");
 
+// Progress state elements
+const progressState   = $("#progressState");
+const progressTitle   = $("#progressTitle");
+const progressCounter = $("#progressCounter");
+const progressBar     = $("#progressBar");
+const progressFeed    = $("#progressFeed");
+
 // Steps
 const step1 = $("#step1");
 const step2 = $("#step2");
@@ -87,9 +94,10 @@ function activateStep(n) {
 }
 
 function showCanvas(which) {
-  emptyState.hidden   = which !== "empty";
-  confirmState.hidden = which !== "confirm";
-  mapState.hidden     = which !== "maps";
+  emptyState.hidden    = which !== "empty";
+  confirmState.hidden  = which !== "confirm";
+  progressState.hidden = which !== "progress";
+  mapState.hidden      = which !== "maps";
 }
 
 // ── File handling ──────────────────────────────────────
@@ -263,6 +271,13 @@ async function generate() {
   logToggle.hidden = false;
   logEl.textContent = "Starting…\n";
 
+  // Show progress feed in main area
+  progressTitle.textContent = "Geocoding locations…";
+  progressCounter.textContent = "";
+  progressBar.style.width = "0%";
+  progressFeed.innerHTML = "";
+  showCanvas("progress");
+
   const fd = new FormData();
   fd.append("file", currentFile);
   fd.append("sheetName", sheetSelect.value);
@@ -281,28 +296,91 @@ async function generate() {
 
   try {
     const res = await fetch("/api/generate", { method: "POST", body: fd });
-    const data = await res.json();
-    if (!res.ok) {
-      errorHint.innerHTML = String(data.error).includes("OPENAI_API_KEY")
-        ? 'Server needs <code>OPENAI_API_KEY</code>.'
-        : esc(data.error || "Generation failed.");
-      errorHint.hidden = false;
-      return;
+
+    if (!res.ok && !res.headers.get("content-type")?.includes("ndjson")) {
+      const errData = await res.json();
+      throw new Error(errData.error || "Generation failed.");
     }
-    logEl.textContent = (data.logs || []).join("\n");
-    generatedDetails = data.details || [];
+
+    // Stream NDJSON response
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let resultData = null;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+
+      // Process complete lines
+      const lines = buffer.split("\n");
+      buffer = lines.pop(); // keep incomplete last line
+
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        let msg;
+        try { msg = JSON.parse(line); } catch { continue; }
+
+        if (msg.type === "progress") {
+          const pct = ((msg.index / msg.total) * 100).toFixed(0);
+          progressCounter.textContent = `${msg.index} / ${msg.total}`;
+          progressBar.style.width = pct + "%";
+
+          const sourceLabel = msg.source === "cache" ? "CACHED" : msg.source === "api" ? "API" : "FAILED";
+          const row = document.createElement("div");
+          row.className = `progress-row source-${msg.source}`;
+          row.innerHTML =
+            `<span class="progress-idx">${msg.index}</span>` +
+            `<span class="progress-tag">${sourceLabel}</span>` +
+            `<span class="progress-loc">${esc(msg.location)}</span>`;
+          progressFeed.appendChild(row);
+          progressFeed.scrollTop = progressFeed.scrollHeight;
+        } else if (msg.type === "phase") {
+          progressTitle.textContent = msg.message;
+          const phaseRow = document.createElement("div");
+          phaseRow.className = "progress-phase";
+          phaseRow.textContent = msg.message;
+          progressFeed.appendChild(phaseRow);
+          progressFeed.scrollTop = progressFeed.scrollHeight;
+        } else if (msg.type === "result") {
+          resultData = msg;
+        } else if (msg.type === "error") {
+          throw new Error(msg.error);
+        }
+      }
+    }
+
+    // Process any remaining buffer
+    if (buffer.trim()) {
+      try {
+        const msg = JSON.parse(buffer);
+        if (msg.type === "result") resultData = msg;
+        else if (msg.type === "error") throw new Error(msg.error);
+      } catch {}
+    }
+
+    if (!resultData) {
+      throw new Error("No result received from server.");
+    }
+
+    logEl.textContent = (resultData.logs || []).join("\n");
+    generatedDetails = resultData.details || [];
     populateResultsTable(generatedDetails);
-    showMaps(data);
+    showMaps(resultData);
 
     // Store updated Excel with embedded cache for re-upload
-    if (data.updatedExcel) {
-      const bytes = Uint8Array.from(atob(data.updatedExcel), c => c.charCodeAt(0));
+    if (resultData.updatedExcel) {
+      const bytes = Uint8Array.from(atob(resultData.updatedExcel), c => c.charCodeAt(0));
       const blob = new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
       currentFile = new File([blob], currentFile.name, { type: blob.type });
     }
   } catch (e) {
-    errorHint.textContent = String(e.message || e);
+    errorHint.innerHTML = String(e.message).includes("OPENAI_API_KEY")
+      ? 'Server needs <code>OPENAI_API_KEY</code>.'
+      : esc(String(e.message || e) || "Generation failed.");
     errorHint.hidden = false;
+    showCanvas("confirm");
   } finally {
     goBtn.disabled = false;
     goBtn.textContent = "Generate maps";
@@ -508,13 +586,9 @@ function applyLiveSettings() {
 
     // Detail: swap the path's `d` attribute with the simplified version
     if (detailAttr) {
-      const simplified = p.dataset[detailAttr.replace("-", "")]; // data-d-0 → dataset.d0, etc.
-      // dataset keys: data-d-0 → d0, data-d-25 → d25, etc.
-      const key = `d${detailAttr.split("-")[1]}`;
-      const simplifiedD = p.dataset[key];
+      const simplifiedD = p.getAttribute(`data-${detailAttr}`);
       if (simplifiedD != null) {
         p.setAttribute("d", simplifiedD || "");
-        // Hide paths that simplified away completely
         p.setAttribute("display", simplifiedD ? "inline" : "none");
       }
     } else {

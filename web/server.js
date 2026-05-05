@@ -123,8 +123,17 @@ app.post("/api/generate", upload.single("file"), async (req, res) => {
       regions = ["world", "europe", "asia", "north_america", "south_america"];
     }
 
+    // Stream NDJSON for live progress
+    res.setHeader("Content-Type", "application/x-ndjson");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("X-Accel-Buffering", "no"); // disable nginx buffering on Railway
+
     const logs = [];
     const log = (msg) => logs.push(`[${new Date().toISOString()}] ${msg}`);
+
+    const onProgress = (evt) => {
+      try { res.write(JSON.stringify({ type: "progress", ...evt }) + "\n"); } catch {}
+    };
 
     const { files, plotted, details, updatedExcel } = await runPipeline(req.file.buffer, {
       sheetName,
@@ -140,9 +149,14 @@ app.post("/api/generate", upload.single("file"), async (req, res) => {
       regions,
       apiKey,
       cachePath: CACHE_PATH,
-    }, log);
+    }, log, onProgress);
 
-    res.json({
+    // Send rendering phase indicator
+    try { res.write(JSON.stringify({ type: "phase", message: "Rendering maps…" }) + "\n"); } catch {}
+
+    // Final result
+    res.write(JSON.stringify({
+      type: "result",
       ok: true,
       plotted,
       logs,
@@ -152,10 +166,17 @@ app.post("/api/generate", upload.single("file"), async (req, res) => {
         svg: f.svg,
       })),
       updatedExcel: updatedExcel ? Buffer.from(updatedExcel).toString("base64") : null,
-    });
+    }) + "\n");
+    res.end();
   } catch (e) {
     console.error(e);
-    res.status(500).json({ error: String(e.message || e) });
+    // If headers already sent, write error as NDJSON
+    if (res.headersSent) {
+      try { res.write(JSON.stringify({ type: "error", error: String(e.message || e) }) + "\n"); } catch {}
+      res.end();
+    } else {
+      res.status(500).json({ error: String(e.message || e) });
+    }
   }
 });
 

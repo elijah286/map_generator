@@ -62,13 +62,13 @@ export async function geocodeLocation(locationString, cache, cachePath, apiKey, 
   if (cache[key]) {
     const v = cache[key];
     log?.(`Cached: ${key}`);
-    return { lat: v[0], lon: v[1] };
+    return { lat: v[0], lon: v[1], source: "cache" };
   }
   const lower = key.toLowerCase();
   for (const [k, v] of Object.entries(cache)) {
     if (k.toLowerCase() === lower && Array.isArray(v) && v.length >= 2) {
       log?.(`Cached: ${key}`);
-      return { lat: v[0], lon: v[1] };
+      return { lat: v[0], lon: v[1], source: "cache" };
     }
   }
 
@@ -83,17 +83,21 @@ export async function geocodeLocation(locationString, cache, cachePath, apiKey, 
   if (coords) {
     cache[key] = [coords.lat, coords.lon];
     saveCache(cachePath, cache);
-    return coords;
+    return { ...coords, source: "api" };
   }
   log?.(`Failed: ${key}`);
   return null;
 }
 
-export async function geocodeAll(rows, cachePath, apiKey, log, excelCache = {}) {
+export async function geocodeAll(rows, cachePath, apiKey, log, excelCache = {}, onProgress) {
   const cache = { ...loadCache(cachePath), ...excelCache };
+  const total = rows.length;
   const out = [];
-  for (const row of rows) {
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
     const c = await geocodeLocation(row.LocationString, cache, cachePath, apiKey, log);
+    const source = c ? c.source : "fail";
+    onProgress?.({ index: i + 1, total, location: row.LocationString, source });
     out.push({
       ...row,
       Latitude: c?.lat ?? null,

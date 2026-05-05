@@ -4,7 +4,7 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Map Generator</title>
-  <link rel="stylesheet" href="/styles.css?v=6"/>
+  <link rel="stylesheet" href="/styles.css?v=7"/>
 </head>
 <body>
   <div class="app">
@@ -158,6 +158,16 @@
         </div>
       </div>
 
+      <!-- Progress feed (shown during generation) -->
+      <div class="canvas-progress" id="progressState" hidden>
+        <div class="progress-header">
+          <h2 id="progressTitle">Geocoding locations…</h2>
+          <p class="progress-counter" id="progressCounter">0 / 0</p>
+        </div>
+        <div class="progress-bar-track"><div class="progress-bar-fill" id="progressBar"></div></div>
+        <div class="progress-feed" id="progressFeed"></div>
+      </div>
+
       <!-- Map viewer -->
       <div class="canvas-maps" id="mapState" hidden>
         <div class="tab-bar" id="tabBar"></div>
@@ -209,6 +219,6 @@
     </div>
 
   </div>
-  <script src="/app.js?v=6" type="module"></script>
+  <script src="/app.js?v=7" type="module"></script>
 </body>
 </html>
