@@ -442,7 +442,6 @@ function selectTab(regionKey) {
     p.dataset.baseSw = p.getAttribute("stroke-width");
     p.dataset.baseFill = p.getAttribute("fill");
     p.dataset.baseStroke = p.getAttribute("stroke");
-    p.dataset.baseD = p.getAttribute("d");
     if (p.dataset.countryId === "010") p.dataset.isAntarctica = "1";
   });
 
@@ -530,7 +529,24 @@ function darkenHex(hex, factor = 0.5) {
 }
 
 // ── Apply live settings to inline SVG ───────────────
-const DETAIL_LEVELS = [0, 25, 50, 75]; // must match server DETAIL_LEVELS
+// Area thresholds (steradians) for each detail level
+const AREA_THRESHOLDS = {
+  100: 0,       // show everything
+  75: 0.0001,   // hide tiny micro-islands
+  50: 0.002,    // hide small islands + small countries
+  25: 0.012,    // only major countries
+  0: Infinity,  // hide all individual paths (merged landmass only)
+};
+
+function getAreaThreshold(pct) {
+  // Map slider % to the nearest threshold at or below
+  const levels = [0, 25, 50, 75, 100];
+  let best = 0;
+  for (const lvl of levels) {
+    if (lvl <= pct) best = lvl;
+  }
+  return AREA_THRESHOLDS[best];
+}
 
 function applyLiveSettings() {
   const svg = mapViewport.querySelector("svg");
@@ -558,18 +574,10 @@ function applyLiveSettings() {
     c.setAttribute("stroke", stroke);
   });
 
-  // Detail level: pick the right simplified `d` attribute
+  // Detail level: area-based visibility filtering
   const detailPct = parseFloat(detailSlider.value);
-  let effectiveLevel = 100;
-  let detailAttr = null; // null = use original d (100%)
-  if (detailPct < 100) {
-    let best = DETAIL_LEVELS[0];
-    for (const lvl of DETAIL_LEVELS) {
-      if (lvl <= detailPct) best = lvl;
-    }
-    effectiveLevel = best;
-    detailAttr = `d-${best}`;
-  }
+  const areaThreshold = getAreaThreshold(detailPct);
+  const showMerged = detailPct < 1; // level 0: show merged landmass only
 
   // Land paths
   svg.querySelectorAll("g.land path").forEach((p) => {
@@ -586,24 +594,19 @@ function applyLiveSettings() {
 
     // Merged landmass path: only visible at detail level 0
     if (p.dataset.mergedLand === "1") {
-      p.setAttribute("display", effectiveLevel === 0 ? "inline" : "none");
+      p.setAttribute("display", showMerged ? "inline" : "none");
       return;
     }
 
-    // Detail: swap the path's `d` attribute with the simplified version
-    if (detailAttr) {
-      const simplifiedD = p.getAttribute(`data-${detailAttr}`);
-      if (simplifiedD != null) {
-        p.setAttribute("d", simplifiedD || "");
-        p.setAttribute("display", simplifiedD ? "inline" : "none");
-      }
-    } else {
-      // Restore full detail from stored base
-      if (p.dataset.baseD) {
-        p.setAttribute("d", p.dataset.baseD);
-      }
-      p.setAttribute("display", "inline");
+    // Hide individual paths at level 0 (merged path takes over)
+    if (showMerged) {
+      p.setAttribute("display", "none");
+      return;
     }
+
+    // Area-based filtering: hide features below threshold
+    const area = parseFloat(p.dataset.area) || 0;
+    p.setAttribute("display", area >= areaThreshold ? "inline" : "none");
   });
 
   // Viewport background
